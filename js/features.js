@@ -245,6 +245,33 @@ const GAME_CONTENT = {
       ["sieden", "Bei wéi enger Temperatur kacht Waasser um Niveau vum Mier?", ["100 °C", "80 °C", "120 °C", "212 °C"], "Op héije Bierger kacht Waasser méi fréi, well de Loftdrock do méi niddreg ass."]
     ],
     anagrams: [["WAASSER", "Ouni mech gëtt et kee Liewen."], ["QUELL", "Hei fänkt eng Baach un."], ["MUSEL", "Floss un der Grenz mat Däitschland."], ["UELZECHT", "Floss duerch d'Haaptstad."], ["SAUER", "Floss, un deem Iechternach läit."], ["REEN", "E fält aus de Wolleken."], ["WOLLEK", "Si schwëmmt um Himmel."], ["FLÄSCH", "Huel se ëmmer nees mat."], ["SÉI", "Grousst Waasser am Norden."], ["DRËPS", "Dee klengsten Deel vum Reen."]]
+  },
+  pt: {
+    riddles: [
+      ["hahn", "Rodam-me e eu dou-te água. Estou em todas as cozinhas e casas de banho. Quem sou eu?", ["torneira"], "Tenho um manípulo e uma bica.", "No Luxemburgo, a água da torneira é potável. Podes encher a garrafa de graça em quase todo o lado."],
+      ["fluss", "Tenho leito mas nunca durmo. Tenho foz mas nunca falo. Quem sou eu?", ["rio", "ribeiro", "riacho"], "O Alzette é um de nós.", "O Alzette atravessa a cidade do Luxemburgo, pelo Grund e por Pfaffenthal."],
+      ["handtuch", "Quanto mais seco, mais molhada fico. Quem sou eu?", ["toalha", "toalha de banho"], "Precisas de mim depois do duche.", "Uma toalha absorve água graças às suas muitas fibras pequenas."],
+      ["flasche", "Tenho gargalo mas não tenho cabeça, e levo a tua água para todo o lado. Quem sou eu?", ["garrafa", "cantil"], "Enche-me num bebedouro.", "Cada vez que enches uma garrafa reutilizável, poupas uma de plástico."],
+      ["wolke", "Voo sem asas e choro sem olhos. Quem sou eu?", ["nuvem", "nuvens"], "Olha para cima quando estiver para chover.", "As nuvens são feitas de gotinhas de água ou de cristais de gelo."],
+      ["eis", "Quando faz frio, fico duro. Quando aquece, fujo. Quem sou eu?", ["gelo", "cubo de gelo"], "Sou água congelada.", "A água expande-se quando congela. Por isso o gelo flutua."],
+      ["tau", "De manhã estou nas folhas de relva e desapareço assim que chega o sol. Quem sou eu?", ["orvalho", "orvalhada"], "Começo pela letra O.", "O orvalho forma-se quando o ar húmido arrefece durante a noite em superfícies frias."],
+      ["regenbogen", "Tenho sete cores mas nenhum pincel. Apareço quando o sol e a chuva se encontram. Quem sou eu?", ["arco-íris", "arco iris"], "Sou um arco colorido no céu.", "As gotas de chuva separam a luz do sol nas suas cores."],
+      ["quelle", "Saio da terra, límpida e fresca, e estou no início de cada ribeiro. Quem sou eu?", ["nascente", "fonte"], "Na Aqua Map tenho a minha própria cor.", "A água de nascente é água subterrânea que sobe sozinha à superfície."],
+      ["schnee", "Caio do céu, sou branco e frio, e não há dois de nós iguais. Quem sou eu?", ["floco de neve", "neve", "floco", "flocos de neve"], "Chego sobretudo no inverno.", "Os flocos de neve são cristais de gelo, quase sempre com seis braços."]
+    ],
+    quiz: [
+      ["formel", "Qual é a fórmula química da água?", ["H₂O", "CO₂", "O₂", "NaCl"], "Uma molécula de água tem dois átomos de hidrogénio e um de oxigénio."],
+      ["alzette", "Que rio atravessa a cidade do Luxemburgo?", ["Alzette", "Mosela", "Reno", "Mosa"], "O Alzette passa pela cidade baixa, onde o Pétrusse também desagua nele."],
+      ["mosel", "Que rio faz a fronteira entre o Luxemburgo e a Alemanha, a sudeste?", ["Mosela", "Alzette", "Wiltz", "Attert"], "Schengen, Remich e Grevenmacher ficam junto ao Mosela."],
+      ["stausee", "De que lago vem grande parte da água potável do Luxemburgo?", ["Lago da Alta Sûre", "Lago de Constança", "Lago de Echternach", "Lago Léman"], "A água do lago da Alta Sûre é tratada em Esch-sur-Sûre para se tornar potável."],
+      ["gefrier", "A que temperatura congela a água à pressão normal?", ["0 °C", "4 °C", "−10 °C", "32 °C"], "32 graus é o ponto de congelação em Fahrenheit, não em Celsius."],
+      ["dichte", "A que temperatura é que a água é mais densa?", ["a cerca de 4 °C", "a 0 °C", "a 20 °C", "a 100 °C"], "Por isso, no inverno, a água no fundo dos lagos profundos está muitas vezes a cerca de 4 graus."],
+      ["trinken", "Quanto deve um adulto beber por dia, segundo as recomendações habituais?", ["cerca de 1,5 litros", "cerca de 0,3 litros", "cerca de 5 litros", "cerca de 10 litros"], "Com calor ou a fazer desporto, é preciso beber mais."],
+      ["erde", "Que parte da superfície da Terra está coberta de água?", ["cerca de 71 %", "cerca de 30 %", "cerca de 50 %", "cerca de 90 %"], "Só uma parte muito pequena é água doce."],
+      ["refill", "O que significa um autocolante redondo «Refill» na porta de uma loja?", ["Enchem-te a garrafa de graça com água da torneira", "Aceitam garrafas com tara", "Vendem garrafas", "A água está em promoção"], "Na Aqua Map encontras estes locais em «Estações Refill»."],
+      ["sieden", "A que temperatura ferve a água ao nível do mar?", ["100 °C", "80 °C", "120 °C", "212 °C"], "Nas montanhas altas, a água ferve mais cedo porque a pressão do ar é mais baixa."]
+    ],
+    anagrams: [["ÁGUA", "Sem mim não há vida."], ["FONTE", "Aqui enches a garrafa."], ["NASCENTE", "Aqui começa um ribeiro."], ["GOTA", "A parte mais pequena da chuva."], ["MOSELA", "Rio na fronteira com a Alemanha."], ["ALZETTE", "Rio que atravessa a capital."], ["CHUVA", "Cai das nuvens."], ["ONDA", "Rola pelo lago."], ["GARRAFA", "Leva-a sempre contigo."], ["NUVEM", "Flutua no céu."]]
   }
 };
 const GC = GAME_CONTENT[LANG] || GAME_CONTENT.de;
@@ -260,7 +287,7 @@ function lev(a, b) {
   for (let i = 1; i <= m; i++) for (let j = 1; j <= n; j++) d[i][j] = Math.min(d[i - 1][j] + 1, d[i][j - 1] + 1, d[i - 1][j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
   return d[m][n];
 }
-const ARTICLES = /\b(der|die|das|ein|eine|einen|ich bin|du bist|es ist|le|la|les|l|un|une|je suis|c est|the|a|an|it s|its|it is|i am|den|d|en|eng|ech sinn|et ass)\b/g;
+const ARTICLES = /\b(der|die|das|ein|eine|einen|ich bin|du bist|es ist|le|la|les|l|un|une|je suis|c est|the|a|an|it s|its|it is|i am|den|d|en|eng|ech sinn|et ass|o|os|as|um|uma|eu sou|sou|e um|e uma)\b/g;
 const cleanAnswer = (s) => norm(s).replace(/ß/g, "ss").replace(/[^a-z ]/g, " ").replace(ARTICLES, " ").replace(/\s+/g, "").trim();
 function isRight(input, answers) {
   const x = cleanAnswer(input); if (!x) return false;
@@ -935,12 +962,15 @@ function updateStepsUI() {
 }
 
 /* ---------------- Rangliste ---------------- */
-// Wird nach der Einrichtung der Online-Datenbank (Supabase) ausgefüllt
-const LB = { url: "", key: "" };
+// Online-Datenbank (Supabase, Frankfurt). Der Schlüssel ist öffentlich: er erlaubt nur Lesen
+// der Rangliste und die beiden Funktionen upsert_score/remove_score, die das Geheimnis prüfen.
+const LB = { url: "https://zwperzojxovytftcvuwf.supabase.co", key: "sb_publishable_HRJUl4dzeOSkGSbj73zraQ_MaDNycjA" };
 const lbReady = () => !!(LB.url && LB.key);
 const lbIdent = (() => { let v = store.get("aqua-lb-id", null); if (!v) { const rnd = () => (crypto.randomUUID ? crypto.randomUUID() : String(Math.random()).slice(2) + Date.now()); v = { id: rnd(), secret: rnd() + rnd() }; store.set("aqua-lb-id", v); } return v; })();
 async function lbCall(path, opts = {}) {
-  const res = await fetch(`${LB.url}/rest/v1/${path}`, { ...opts, headers: { apikey: LB.key, Authorization: `Bearer ${LB.key}`, "Content-Type": "application/json", ...(opts.headers || {}) } });
+  // Publishable Keys gehören nur in den apikey-Header (sie sind kein JWT)
+  const auth = LB.key.startsWith("eyJ") ? { Authorization: `Bearer ${LB.key}` } : {};
+  const res = await fetch(`${LB.url}/rest/v1/${path}`, { ...opts, headers: { apikey: LB.key, ...auth, "Content-Type": "application/json", ...(opts.headers || {}) } });
   if (!res.ok) throw new Error("HTTP " + res.status);
   return res;
 }
@@ -990,7 +1020,7 @@ async function renderRanking() {
     const rows = await res.json();
     let myRank = rows.findIndex((x) => x.id === lbIdent.id) + 1;
     if (!myRank) {
-      const c = await lbCall(`leaderboard_public?select=id&points=gt.${profile.points}`, { headers: { Prefer: "count=exact", Range: "0-0" } });
+      const c = await lbCall(`leaderboard_public?select=id&points=gt.${profile.points}&limit=1`, { headers: { Prefer: "count=exact" } });
       const m = /\/(\d+)/.exec(c.headers.get("content-range") || ""); myRank = m ? +m[1] + 1 : 0;
     }
     b.innerHTML = `${me(myRank ? t("Platz {n}", { n: myRank }) : "")}
@@ -1036,6 +1066,14 @@ const WATER_INFO = {
     ["Opbereedung um Stauséi", "D'Waasser aus dem Séi gëtt vum Syndikat SEBES zu Esch-Sauer a méi Etappen opbereet, ënner anerem mat Filtratioun an Ozon, ier et an d'Netz geet."],
     ["Stad Lëtzebuerg", "D'Haaptstad kritt hiert Waasser zu ongeféier 70 % aus egene Quellen an zu ongeféier 30 % vum SEBES. De Service des eaux vun der Stad kontrolléiert d'Drénkwaasser méi wéi 2.000 Mol am Joer. D'Analysen fënns de op eaux.vdl.lu."],
     ["Quellen an der App", "Plazen, déi als „Quell“ markéiert sinn, sinn natierlech Quellen oder al Pëtzer. Hiert Waasser gëtt net onbedéngt offiziell iwwerwaacht. Drénk do nëmmen, wann e Schëld d'Waasser als Drénkwaasser ausweist."]
+  ],
+  pt: [
+    ["", "Os bebedouros e as torneiras públicas estão ligados à rede normal de água potável. Sai deles a mesma água que da torneira de casa. Nas estações Refill recebes a água da torneira do estabelecimento."],
+    ["Água subterrânea e barragem", "No Luxemburgo, cerca de metade da água potável vem de águas subterrâneas, captadas em cerca de 270 nascentes e cerca de 40 furos. A outra metade vem da barragem da Alta Sûre. A proporção varia um pouco de ano para ano."],
+    ["O arenito do Luxemburgo", "Cerca de dois terços das águas subterrâneas utilizadas vêm do arenito do Luxemburgo. Esta camada de rocha guarda a água da chuva como uma grande esponja e filtra-a."],
+    ["Tratamento na barragem", "A água do lago é tratada pelo sindicato SEBES em Esch-sur-Sûre em várias etapas, incluindo filtração e ozono, antes de entrar na rede."],
+    ["Cidade do Luxemburgo", "A capital recebe cerca de 70 % da água das suas próprias nascentes e cerca de 30 % do SEBES. O serviço de águas da cidade controla a água potável mais de 2000 vezes por ano. As análises estão em eaux.vdl.lu."],
+    ["As nascentes na app", "Os locais marcados como «Nascente» são nascentes naturais ou poços antigos. A água não é necessariamente controlada oficialmente. Só bebas lá se uma placa indicar que é água potável."]
   ]
 };
 function renderSettings() {
@@ -1113,4 +1151,6 @@ renderNavAvatar();
 drawReports();
 coreInit();
 scheduleReminder();
+if (profile.lbOptIn) lbQueueSync();
+window.addEventListener("online", () => { if (profile.lbOptIn) lbQueueSync(); });
 if (/^#(spiel|raetsel)$/.test(location.hash)) go("games");

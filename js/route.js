@@ -3,7 +3,7 @@
    Routing: Valhalla auf den Servern des FOSSGIS e.V. (max. 1 Anfrage pro Sekunde) */
 
 const VALHALLA = "https://valhalla1.openstreetmap.de/route";
-const VALHALLA_LANG = { de: "de-DE", fr: "fr-FR", en: "en-US", lb: "de-DE" };
+const VALHALLA_LANG = { de: "de-DE", fr: "fr-FR", en: "en-US", lb: "de-DE", pt: "pt-PT" };
 const VALHALLA_ATTR = 'Route: <a href="https://valhalla.openstreetmap.de/" target="_blank" rel="noopener">Valhalla (FOSSGIS)</a>';
 const route = { it: null, coords: null, cum: null, man: null, total: 0, time: 0, lines: null, watch: null, follow: false, arrived: false, busy: false, lastReq: 0 };
 

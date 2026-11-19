@@ -23,7 +23,7 @@ area["ISO3166-1"="LU"][admin_level=2]->.lu;
 );
 out center;`;
 const PHOTON = "https://photon.komoot.io";
-const PHOTON_LANG = { de: "de", fr: "fr", en: "en", lb: "de" };
+const PHOTON_LANG = { de: "de", fr: "fr", en: "en", lb: "de", pt: "fr" };
 const CACHE_KEY = "aqua-data-v2", FAV_KEY = "aqua-favs-v1", WINTER_KEY = "aqua-winter-dismissed", INSTALL_KEY = "aqua-install-dismissed";
 const CACHE_FRESH_MS = 12 * 3600 * 1000;
 
@@ -118,7 +118,7 @@ function classify(tg) {
   return "hahn";
 }
 
-const NAME_KEY = { de: "name:de", fr: "name:fr", en: "name:en", lb: "name:lb" }[LANG];
+const NAME_KEY = { de: "name:de", fr: "name:fr", en: "name:en", lb: "name:lb", pt: "name:pt" }[LANG];
 function normalize(el) {
   const tg = el.tags || {};
   const lat = el.lat ?? (el.center && el.center.lat);
@@ -592,7 +592,8 @@ const DAYS = {
   de: { Mo: "Mo", Tu: "Di", We: "Mi", Th: "Do", Fr: "Fr", Sa: "Sa", Su: "So", PH: "Feiertage", off: "geschlossen" },
   fr: { Mo: "lun.", Tu: "mar.", We: "mer.", Th: "jeu.", Fr: "ven.", Sa: "sam.", Su: "dim.", PH: "jours fériés", off: "fermé" },
   en: { Mo: "Mon", Tu: "Tue", We: "Wed", Th: "Thu", Fr: "Fri", Sa: "Sat", Su: "Sun", PH: "public holidays", off: "closed" },
-  lb: { Mo: "Méi.", Tu: "Dën.", We: "Mët.", Th: "Don.", Fr: "Fre.", Sa: "Sam.", Su: "Son.", PH: "Feierdeeg", off: "zou" }
+  lb: { Mo: "Méi.", Tu: "Dën.", We: "Mët.", Th: "Don.", Fr: "Fre.", Sa: "Sam.", Su: "Son.", PH: "Feierdeeg", off: "zou" },
+  pt: { Mo: "seg.", Tu: "ter.", We: "qua.", Th: "qui.", Fr: "sex.", Sa: "sáb.", Su: "dom.", PH: "feriados", off: "fechado" }
 };
 function hoursText(h) {
   if (!h) return null;

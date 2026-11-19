@@ -1,10 +1,10 @@
 "use strict";
-/* Aqua Map – Sprachen (Deutsch, Français, English, Lëtzebuergesch) und Design
+/* Aqua Map – Sprachen (Deutsch, Français, English, Lëtzebuergesch, Português) und Design
    Texte stehen im Code auf Deutsch; t() übersetzt sie mit der Tabelle TR aus i18n-dict.js. */
 
-const LANGS = { de: "Deutsch", fr: "Français", en: "English", lb: "Lëtzebuergesch" };
-const LOCALES = { de: "de-DE", fr: "fr-LU", en: "en-GB", lb: "lb-LU" };
-const LANG_IDX = { fr: 0, en: 1, lb: 2 };
+const LANGS = { de: "Deutsch", fr: "Français", en: "English", lb: "Lëtzebuergesch", pt: "Português" };
+const LOCALES = { de: "de-DE", fr: "fr-LU", en: "en-GB", lb: "lb-LU", pt: "pt-PT" };
+const LANG_IDX = { fr: 0, en: 1, lb: 2, pt: 3 };
 
 const LANG = (() => {
   try { const s = JSON.parse(localStorage.getItem("aqua-lang") || "null"); if (s && LANGS[s]) return s; } catch (e) { /* ohne Speicher */ }
