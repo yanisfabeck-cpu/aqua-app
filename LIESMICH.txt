@@ -1,0 +1,30 @@
+Aqua Map – Gratis Trinkwasser in Luxemburg
+===========================================
+
+Schnell ansehen am PC
+  Ordner entpacken und index.html doppelklicken (am besten in Chrome oder Edge).
+
+Funktionen
+  Karte      Alle kostenlosen Wasserstellen aus OpenStreetMap, mit Ortsnamen,
+             Filtern, Suche, „In meiner Nähe“ und Routenplanung.
+  Rätsel     Wasser-Rätsel, Wasser-Quiz und Buchstabensalat. Gibt Punkte.
+  Scannen    QR-Codes mit der Kamera oder von einem Foto lesen. Jede
+             Wasserstelle hat einen eigenen QR-Code (Details > QR-Code), den
+             man als Aufkleber ausdrucken kann. Scannen gibt Besuchspunkte.
+  Eintragen  Fehlende Wasserstelle auf der Karte markieren und melden. Die
+             Meldung geht ohne Namen als öffentlicher Hinweis an
+             OpenStreetMap. Freiwillige prüfen ihn und tragen die Stelle ein.
+  Profil     Spitzname, Bild, Punkte, Level, Abzeichen und eigene Meldungen.
+             Das Profil wird nur auf dem jeweiligen Gerät gespeichert.
+
+Online stellen und als App installieren
+  Den ganzen Ordner unverändert bei einem Webhoster mit HTTPS hochladen,
+  zum Beispiel GitHub Pages, Netlify oder Cloudflare Pages (alle kostenlos).
+  Android (Chrome): Adresse öffnen, auf „App installieren“ tippen.
+  iPhone (Safari): Teilen > „Zum Home-Bildschirm“ > „Hinzufügen“.
+  Computer (Chrome/Edge): Installieren-Symbol in der Adressleiste.
+  Die Kamera für den QR-Scanner funktioniert nur über HTTPS (oder lokal).
+
+Daten
+  Wasserstellen und Ortsnamen: OpenStreetMap-Mitwirkende (ODbL).
+  Kartenbilder: CARTO, Esri. Ortssuche: Photon (Komoot).

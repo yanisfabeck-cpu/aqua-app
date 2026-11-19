@@ -1,0 +1,29 @@
+{
+  "id": "./",
+  "name": "Aqua Map – Gratis Trinkwasser in Luxemburg",
+  "short_name": "Aqua Map",
+  "description": "Alle kostenlosen Trinkbrunnen, Wasserspender und Refill-Stationen in Luxemburg auf einer Karte.",
+  "lang": "de",
+  "dir": "ltr",
+  "start_url": "./?source=app",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#13304D",
+  "theme_color": "#13304D",
+  "categories": ["navigation", "travel", "lifestyle"],
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-maskable-192.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable" },
+    { "src": "icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    {
+      "name": "Wasser in meiner Nähe",
+      "short_name": "In der Nähe",
+      "url": "./?near=1",
+      "icons": [{ "src": "icons/shortcut-near-96.png", "sizes": "96x96", "type": "image/png" }]
+    }
+  ]
+}
