@@ -1,6 +1,6 @@
 /* Aqua Map – Service Worker
    Hält die App offline verfügbar und speichert angesehene Kartenkacheln. */
-const VERSION = "aqua-map-v3";
+const VERSION = "aqua-map-v4";
 const SHELL_CACHE = `${VERSION}-shell`;
 const TILE_CACHE = "aqua-map-tiles-v2";
 const FONT_CACHE = "aqua-map-fonts-v1";
@@ -93,7 +93,17 @@ self.addEventListener("fetch", (event) => {
     return;
   }
   if (url.origin === self.location.origin) {
-    event.respondWith(caches.match(req, { ignoreSearch: true }).then((hit) => hit || fetch(req)));
+    // App-Dateien: zuerst Netz, damit Updates sofort ankommen; offline aus dem Speicher
+    event.respondWith((async () => {
+      const cache = await caches.open(SHELL_CACHE);
+      try {
+        const res = await fetch(req, { cache: "no-cache" });
+        if (res.ok) cache.put(req, res.clone());
+        return res;
+      } catch (e) {
+        return (await cache.match(req, { ignoreSearch: true })) || Response.error();
+      }
+    })());
     return;
   }
   if (url.hostname === OFM_HOST) {
