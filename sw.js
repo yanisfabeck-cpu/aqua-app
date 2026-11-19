@@ -1,8 +1,8 @@
 /* Aqua Map – Service Worker
    Hält die App offline verfügbar und speichert angesehene Kartenkacheln. */
-const VERSION = "aqua-map-v2";
+const VERSION = "aqua-map-v3";
 const SHELL_CACHE = `${VERSION}-shell`;
-const TILE_CACHE = "aqua-map-tiles-v1";
+const TILE_CACHE = "aqua-map-tiles-v2";
 const FONT_CACHE = "aqua-map-fonts-v1";
 const MAX_TILES = 3000;
 const SHELL = [
@@ -12,6 +12,8 @@ const SHELL = [
   "./css/app.css",
   "./js/vendor/leaflet.js",
   "./js/vendor/leaflet.markercluster.js",
+  "./js/vendor/maplibre-gl.js",
+  "./js/vendor/leaflet-maplibre-gl.js",
   "./js/vendor/jsqr.min.js",
   "./js/vendor/qrcode.min.js",
   "./js/lu-border.js",
@@ -24,7 +26,8 @@ const SHELL = [
   "./icons/icon-maskable-512.png",
   "./icons/apple-touch-icon.png"
 ];
-const TILE_HOSTS = /(^|\.)basemaps\.cartocdn\.com$|^server\.arcgisonline\.com$/;
+const TILE_HOSTS = /^server\.arcgisonline\.com$/;
+const OFM_HOST = "tiles.openfreemap.org";
 const FONT_HOSTS = /^fonts\.(googleapis|gstatic)\.com$/;
 
 self.addEventListener("install", (event) => {
@@ -60,6 +63,17 @@ async function cacheFirst(request, cacheName, isTile) {
   return res;
 }
 
+async function networkFirst(request, cacheName) {
+  const cache = await caches.open(cacheName);
+  try {
+    const res = await fetch(request);
+    if (res.ok && res.type !== "opaque") cache.put(request, res.clone());
+    return res;
+  } catch (e) {
+    return (await cache.match(request)) || Response.error();
+  }
+}
+
 self.addEventListener("fetch", (event) => {
   const req = event.request;
   if (req.method !== "GET") return; // Overpass-Abfragen (POST) gehen direkt ins Netz
@@ -80,6 +94,13 @@ self.addEventListener("fetch", (event) => {
   }
   if (url.origin === self.location.origin) {
     event.respondWith(caches.match(req, { ignoreSearch: true }).then((hit) => hit || fetch(req)));
+    return;
+  }
+  if (url.hostname === OFM_HOST) {
+    // Versionierte Kacheln, Schriften und Symbole ändern sich nie: aus dem Speicher.
+    // Stil und Kachel-Verzeichnis können sich ändern: zuerst Netz, offline aus dem Speicher.
+    const immutable = /\/(fonts|sprites|natural_earth)\//.test(url.pathname) || /\/planet\/\d{8}_/.test(url.pathname);
+    event.respondWith(immutable ? cacheFirst(req, TILE_CACHE, true).catch(() => Response.error()) : networkFirst(req, TILE_CACHE));
     return;
   }
   if (TILE_HOSTS.test(url.hostname)) {

@@ -168,25 +168,52 @@ map.attributionControl.setPrefix(false);
 map.createPane("mask"); map.getPane("mask").style.zIndex = 350; map.getPane("mask").style.pointerEvents = "none";
 map.createPane("tilelabels"); map.getPane("tilelabels").style.zIndex = 360; map.getPane("tilelabels").style.pointerEvents = "none";
 map.createPane("placelabels"); map.getPane("placelabels").style.zIndex = 640; map.getPane("placelabels").style.pointerEvents = "none";
-const CARTO_ATTR = '© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> © <a href="https://carto.com/attributions" target="_blank" rel="noopener">CARTO</a>';
+const OFM_ATTR = '<a href="https://openfreemap.org" target="_blank" rel="noopener">OpenFreeMap</a> © <a href="https://www.openmaptiles.org/" target="_blank" rel="noopener">OpenMapTiles</a> Daten von <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>';
 const LABEL_MIN_Z = 15;
+// Vektorkarten von OpenFreeMap (kostenlos, ohne Schlüssel), über MapLibre in Leaflet eingebunden
+function vectorBase(style) {
+  return {
+    make: () => L.maplibreGL({ style: `https://tiles.openfreemap.org/styles/${style}`, attributionControl: { customAttribution: OFM_ATTR }, interactive: false }),
+    layer: null
+  };
+}
 const BASES = {
-  hell: L.tileLayer("https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png", { subdomains: "abcd", maxZoom: 20, crossOrigin: "anonymous", attribution: '© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> © <a href="https://carto.com/attributions" target="_blank" rel="noopener">CARTO</a>' }),
-  detail: L.tileLayer("https://{s}.basemaps.cartocdn.com/rastertiles/voyager_nolabels/{z}/{x}/{y}{r}.png", { subdomains: "abcd", maxZoom: 20, crossOrigin: "anonymous", attribution: '© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> © <a href="https://carto.com/attributions" target="_blank" rel="noopener">CARTO</a>' }),
-  satellit: L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", { maxZoom: 19, crossOrigin: "anonymous", attribution: 'Bilder © Esri, Maxar, Earthstar Geographics' })
+  karte: vectorBase("liberty"),
+  hell: vectorBase("positron"),
+  satellit: { make: () => L.layerGroup([
+      L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", { maxZoom: 19, crossOrigin: "anonymous", attribution: "Bilder © Esri, Maxar, Earthstar Geographics" }),
+      L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}", { maxZoom: 19, pane: "tilelabels", crossOrigin: "anonymous" })
+    ]), layer: null }
 };
-const LABEL_TILES = {
-  hell: L.tileLayer("https://{s}.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}{r}.png", { subdomains: "abcd", minZoom: LABEL_MIN_Z, maxZoom: 20, pane: "tilelabels", crossOrigin: "anonymous" }),
-  detail: L.tileLayer("https://{s}.basemaps.cartocdn.com/rastertiles/voyager_only_labels/{z}/{x}/{y}{r}.png", { subdomains: "abcd", minZoom: LABEL_MIN_Z, maxZoom: 20, pane: "tilelabels", crossOrigin: "anonymous" }),
-  satellit: L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}", { minZoom: LABEL_MIN_Z, maxZoom: 19, pane: "tilelabels", crossOrigin: "anonymous" })
-};
-const BASE_NAMES = { hell: "Hell", detail: "Detailliert", satellit: "Satellit" };
-let base = store.get("aqua-base-v2", "detail");
-if (!BASES[base]) base = "detail";
+const BASE_NAMES = { karte: "Karte", hell: "Hell", satellit: "Satellit" };
+let base = store.get("aqua-base-v3", "karte");
+if (!BASES[base]) base = "karte";
+// Beschriftungen auf Deutsch, sonst der Name vor Ort (wie bei Google Maps auf Deutsch)
+function localizeLabels(gl) {
+  try {
+    for (const l of gl.getStyle().layers) {
+      if (l.type !== "symbol" || !l.layout || !l.layout["text-field"]) continue;
+      const tf = JSON.stringify(l.layout["text-field"]);
+      if (tf.includes("name")) gl.setLayoutProperty(l.id, "text-field", ["coalesce", ["get", "name:de"], ["get", "name"]]);
+    }
+  } catch (e) { /* Stil noch nicht bereit */ }
+}
 function useBase(k) {
-  if (BASES[base] && map.hasLayer(BASES[base])) { map.removeLayer(BASES[base]); map.removeLayer(LABEL_TILES[base]); }
-  base = k; BASES[base].addTo(map); LABEL_TILES[base].addTo(map);
-  const el = map.getContainer(); el.classList.remove("base-hell", "base-detail", "base-satellit"); el.classList.add("base-" + base);
+  const cur = BASES[base];
+  if (cur && cur.layer && map.hasLayer(cur.layer)) map.removeLayer(cur.layer);
+  base = k;
+  const b = BASES[base];
+  if (!b.layer) {
+    b.layer = b.make();
+    // Leaflet erzeugt die MapLibre-Karte erst beim Hinzufügen (und bei jedem Wechsel neu)
+    if (b.layer.getMaplibreMap) b.layer.on("add", () => {
+      const gl = b.layer.getMaplibreMap(); if (!gl) return;
+      const fix = () => localizeLabels(gl);
+      gl.once("style.load", fix); gl.once("load", fix);
+    });
+  }
+  b.layer.addTo(map);
+  const el = map.getContainer(); el.classList.remove("base-karte", "base-hell", "base-satellit"); el.classList.add("base-" + base);
 }
 useBase(base);
 
@@ -229,7 +256,7 @@ $("#layerbtn").addEventListener("click", () => {
 $("#layermenu").addEventListener("click", (e) => {
   const b = e.target.closest("button[data-base]"); if (!b) return;
   const k = b.dataset.base; if (k === base) return;
-  useBase(k); store.set("aqua-base-v2", base); drawLabels();
+  useBase(k); store.set("aqua-base-v3", base);
   document.querySelectorAll("#layermenu button").forEach((x) => x.setAttribute("aria-checked", String(x.dataset.base === base)));
   $("#layermenu").hidden = true; $("#layerbtn").setAttribute("aria-expanded", "false");
 });
@@ -305,7 +332,7 @@ function ingest(json) {
 const PLACE_RANK = { city: 0, town: 1, village: 2, suburb: 3, quarter: 4 };
 function toPlace(el) {
   const t = el.tags;
-  const name = t.name || t["name:fr"] || t["name:lb"] || t["name:de"];
+  const name = t["name:de"] || t.name || t["name:fr"] || t["name:lb"];
   if (!name || el.lat == null) return null;
   return { name, lat: el.lat, lon: el.lon, kind: t.place, rank: PLACE_RANK[t.place], pop: parseInt(String(t.population || "0").replace(/\D/g, ""), 10) || 0, n: norm(name) };
 }
@@ -323,30 +350,8 @@ function assignLocality(items, places) {
     if (loc) it.search += " " + norm(loc);
   }
 }
-const labelLayer = L.layerGroup().addTo(map);
-function drawLabels() {
-  labelLayer.clearLayers();
-  const z = map.getZoom();
-  if (z >= LABEL_MIN_Z || !state.places || !state.places.length) return;
-  const maxRank = z < 10 ? 1 : z < 11.5 ? 2 : 4;
-  const b = map.getBounds().pad(0.15);
-  const cand = state.places.filter((p) => p.rank <= maxRank && b.contains([p.lat, p.lon]))
-    .sort((a, c) => a.rank - c.rank || c.pop - a.pop);
-  const placed = [];
-  for (const p of cand) {
-    const fs = p.rank === 0 ? 15 : p.rank === 1 ? 13.5 : p.rank === 2 ? 12.5 : 12;
-    const w = p.name.length * fs * 0.58 + 10, h = fs * 1.4;
-    const pt = map.latLngToContainerPoint([p.lat, p.lon]);
-    const box = { x1: pt.x - w / 2, y1: pt.y + 19, x2: pt.x + w / 2, y2: pt.y + 19 + h };
-    if (placed.some((q) => !(box.x2 < q.x1 || box.x1 > q.x2 || box.y2 < q.y1 || box.y1 > q.y2))) continue;
-    placed.push({ x1: box.x1 - 6, y1: box.y1 - 3, x2: box.x2 + 6, y2: box.y2 + 3 });
-    L.marker([p.lat, p.lon], { pane: "placelabels", interactive: false, keyboard: false,
-      icon: L.divIcon({ className: "pl pl-" + p.kind, html: `<span>${esc(p.name)}</span>`, iconSize: [0, 0] }) }).addTo(labelLayer);
-    if (placed.length >= 140) break;
-  }
-}
-let labelTimer;
-map.on("zoomend moveend", () => { clearTimeout(labelTimer); labelTimer = setTimeout(drawLabels, 60); });
+// Ortsnamen zeichnet jetzt die Vektorkarte selbst (wie bei Google Maps)
+function drawLabels() {}
 
 function setBusy(b) {
   $("#reload").setAttribute("aria-busy", String(b));
