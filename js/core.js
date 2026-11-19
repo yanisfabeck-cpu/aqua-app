@@ -1,7 +1,7 @@
 "use strict";
 /* ============================================================
    Aqua Map – alle kostenlosen Wasserstellen in Luxemburg
-   Datenquelle: OpenStreetMap (Overpass API), live beim Laden
+   Karte, Liste, Details, Suche. Datenquelle: OpenStreetMap
    ============================================================ */
 
 const LU_BOUNDS = L.latLngBounds([49.445, 5.73], [50.185, 6.535]);
@@ -23,14 +23,15 @@ area["ISO3166-1"="LU"][admin_level=2]->.lu;
 );
 out center;`;
 const PHOTON = "https://photon.komoot.io";
+const PHOTON_LANG = { de: "de", fr: "fr", en: "en", lb: "de" };
 const CACHE_KEY = "aqua-data-v2", FAV_KEY = "aqua-favs-v1", WINTER_KEY = "aqua-winter-dismissed", INSTALL_KEY = "aqua-install-dismissed";
 const CACHE_FRESH_MS = 12 * 3600 * 1000;
 
 const CATS = {
-  brunnen: { label: "Trinkbrunnen", one: "Trinkbrunnen", color: "#00A3E0" },
-  refill:  { label: "Refill-Stationen", one: "Refill-Station", color: "#0F9D8A" },
-  hahn:    { label: "Wasserhähne", one: "Wasserhahn", color: "#5560C8" },
-  quelle:  { label: "Quellen & Brunnen", one: "Quelle oder Brunnen", color: "#4F8A3C" }
+  brunnen: { label: t("Trinkbrunnen"), one: t("Trinkbrunnen"), color: "#00A3E0" },
+  refill:  { label: t("Refill-Stationen"), one: t("Refill-Station"), color: "#0F9D8A" },
+  hahn:    { label: t("Wasserhähne"), one: t("Wasserhahn"), color: "#5560C8" },
+  quelle:  { label: t("Quellen & Brunnen"), one: t("Quelle oder Brunnen"), color: "#4F8A3C" }
 };
 const GLYPH = {
   brunnen: '<path d="M8 23.6h8M10.3 23.6v-3.4c0-1.7 1-2.7 2.4-2.7 1.2 0 2 .7 2.3 1.8" stroke="#fff" stroke-width="1.8" fill="none" stroke-linecap="round"/>',
@@ -59,100 +60,103 @@ const isMobile = () => window.matchMedia("(max-width:760px)").matches;
 
 function haversine(a, b) {
   const R = 6371000, toR = Math.PI / 180;
-  const dLat = (b.lat - a.lat) * toR, dLon = (b.lng - a.lng) * toR;
+  const dLat = (b.lat - a.lat) * toR, dLon = ((b.lng ?? b.lon) - (a.lng ?? a.lon)) * toR;
   const s = Math.sin(dLat / 2) ** 2 + Math.cos(a.lat * toR) * Math.cos(b.lat * toR) * Math.sin(dLon / 2) ** 2;
   return 2 * R * Math.asin(Math.sqrt(s));
 }
 function fmtDist(m) {
   if (m < 950) return `${Math.max(10, Math.round(m / 10) * 10)} m`;
-  return `${(m / 1000).toLocaleString("de-DE", { maximumFractionDigits: m < 9500 ? 1 : 0 })} km`;
+  return `${num(m / 1000, { maximumFractionDigits: m < 9500 ? 1 : 0 })} km`;
 }
+const walkMin = (m) => Math.max(1, Math.round(m / 80));
 function fmtWalk(m) {
-  const min = Math.max(1, Math.round(m / 80));
+  const min = walkMin(m);
   if (min > 90) return "";
-  return `${min} Min. zu Fuß`;
+  return t("{n} Min. zu Fuß", { n: min });
 }
 function fmtDate(s) {
   const m = /^(\d{4})-(\d{2})(?:-(\d{2}))?/.exec(s || "");
   if (!m) return s;
-  return m[3] ? `${m[3]}.${m[2]}.${m[1]}` : `${m[2]}/${m[1]}`;
+  return m[3] ? new Date(+m[1], +m[2] - 1, +m[3]).toLocaleDateString(LOC()) : `${m[2]}/${m[1]}`;
 }
 let toastTimer;
 function toast(msg) {
-  const t = $("#toast"); t.textContent = msg; t.hidden = false;
-  clearTimeout(toastTimer); toastTimer = setTimeout(() => (t.hidden = true), 2600);
+  const el = $("#toast"); el.textContent = msg; el.hidden = false;
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => (el.hidden = true), 2800);
 }
 
 /* ---------------- OSM-Daten interpretieren ---------------- */
-const SUBTYPE = (t) => {
-  if (t.fountain === "bubbler") return "Sprudelbrunnen";
-  if (t.fountain === "bottle_refill") return "Flaschen-Nachfüllstation";
-  if (t.natural === "spring") return "Quelle";
-  if (t.man_made === "water_well") return "Wasserbrunnen";
-  if (t.amenity === "fountain") return "Zierbrunnen mit Trinkwasser";
-  if (t.amenity === "water_point") return "Wasserzapfstelle";
-  if (t.amenity === "toilets") return "Wasserhahn an öffentlicher Toilette";
-  if (t.amenity === "grave_yard" || t.landuse === "cemetery") return "Wasserhahn am Friedhof";
-  if (t.amenity === "shelter") return "Schutzhütte mit Trinkwasser";
-  if (t.leisure === "playground") return "Wasserhahn am Spielplatz";
-  if (t.tourism === "picnic_site" || t.leisure === "picnic_table" || t.amenity === "bbq") return "Wasser am Picknickplatz";
-  if (t.highway === "rest_area") return "Rastplatz mit Trinkwasser";
-  if (t.leisure === "park") return "Wasser im Park";
-  if (t["drinking_water:refill"] === "yes" && t.amenity !== "drinking_water") {
-    const place = { cafe: "im Café", restaurant: "im Restaurant", bar: "in der Bar", pub: "im Pub", fast_food: "im Imbiss", library: "in der Bibliothek", townhall: "im Rathaus", ice_cream: "in der Eisdiele", community_centre: "im Gemeinschaftszentrum", hotel: "im Hotel" }[t.amenity] || (t.tourism === "hotel" ? "im Hotel" : t.shop ? "im Geschäft" : t.tourism === "information" ? "in der Touristeninfo" : "");
-    return place ? `Refill-Station ${place}` : "Refill-Station";
+function SUBTYPE(tg) {
+  if (tg.fountain === "bubbler") return t("Sprudelbrunnen");
+  if (tg.fountain === "bottle_refill") return t("Flaschen-Nachfüllstation");
+  if (tg.natural === "spring") return t("Quelle");
+  if (tg.man_made === "water_well") return t("Wasserbrunnen");
+  if (tg.amenity === "fountain") return t("Zierbrunnen mit Trinkwasser");
+  if (tg.amenity === "water_point") return t("Wasserzapfstelle");
+  if (tg.amenity === "toilets") return t("Wasserhahn an öffentlicher Toilette");
+  if (tg.amenity === "grave_yard" || tg.landuse === "cemetery") return t("Wasserhahn am Friedhof");
+  if (tg.amenity === "shelter") return t("Schutzhütte mit Trinkwasser");
+  if (tg.leisure === "playground") return t("Wasserhahn am Spielplatz");
+  if (tg.tourism === "picnic_site" || tg.leisure === "picnic_table" || tg.amenity === "bbq") return t("Wasser am Picknickplatz");
+  if (tg.highway === "rest_area") return t("Rastplatz mit Trinkwasser");
+  if (tg.leisure === "park") return t("Wasser im Park");
+  if (tg["drinking_water:refill"] === "yes" && tg.amenity !== "drinking_water") {
+    const k = { cafe: "Refill-Station im Café", restaurant: "Refill-Station im Restaurant", bar: "Refill-Station in der Bar", pub: "Refill-Station im Pub", fast_food: "Refill-Station im Imbiss", library: "Refill-Station in der Bibliothek", townhall: "Refill-Station im Rathaus", ice_cream: "Refill-Station in der Eisdiele", community_centre: "Refill-Station im Gemeinschaftszentrum", hotel: "Refill-Station im Hotel" }[tg.amenity]
+      || (tg.tourism === "hotel" ? "Refill-Station im Hotel" : tg.shop ? "Refill-Station im Geschäft" : tg.tourism === "information" ? "Refill-Station in der Touristeninfo" : "Refill-Station");
+    return t(k);
   }
-  if (t.man_made === "water_tap") return "Wasserhahn";
-  if (t.amenity === "drinking_water") return "Trinkbrunnen";
-  return "Wasserstelle mit Trinkwasser";
-};
+  if (tg.man_made === "water_tap") return t("Wasserhahn");
+  if (tg.amenity === "drinking_water") return t("Trinkbrunnen");
+  return t("Wasserstelle mit Trinkwasser");
+}
 
-function classify(t) {
-  const isDW = t.amenity === "drinking_water" || t.man_made === "drinking_fountain" || /^(drinking|bubbler|bottle_refill)$/.test(t.fountain || "");
-  if (t.natural === "spring" || t.man_made === "water_well" || (t.amenity === "fountain" && !isDW)) return "quelle";
-  if (isDW && t.man_made !== "water_tap") return "brunnen";
-  if (t["drinking_water:refill"] === "yes" && !isDW) return "refill";
+function classify(tg) {
+  const isDW = tg.amenity === "drinking_water" || tg.man_made === "drinking_fountain" || /^(drinking|bubbler|bottle_refill)$/.test(tg.fountain || "");
+  if (tg.natural === "spring" || tg.man_made === "water_well" || (tg.amenity === "fountain" && !isDW)) return "quelle";
+  if (isDW && tg.man_made !== "water_tap") return "brunnen";
+  if (tg["drinking_water:refill"] === "yes" && !isDW) return "refill";
   return "hahn";
 }
 
+const NAME_KEY = { de: "name:de", fr: "name:fr", en: "name:en", lb: "name:lb" }[LANG];
 function normalize(el) {
-  const t = el.tags || {};
+  const tg = el.tags || {};
   const lat = el.lat ?? (el.center && el.center.lat);
   const lon = el.lon ?? (el.center && el.center.lon);
   if (lat == null || lon == null) return null;
   // Nicht gratis, nicht trinkbar oder nicht zugänglich: weglassen
-  if (t.drinking_water === "no" && t["drinking_water:refill"] !== "yes") return null;
-  if (t.fee === "yes") return null;
-  if (t.access === "private" || t.access === "no") return null;
-  if (t.amenity === "vending_machine" || t.vending) return null;
-  if (t.disused === "yes" || t.abandoned === "yes") return null;
-  if (t.amenity === "drinking_water" && t.drinking_water === "no") return null;
+  if (tg.drinking_water === "no" && tg["drinking_water:refill"] !== "yes") return null;
+  if (tg.fee === "yes") return null;
+  if (tg.access === "private" || tg.access === "no") return null;
+  if (tg.amenity === "vending_machine" || tg.vending) return null;
+  if (tg.disused === "yes" || tg.abandoned === "yes") return null;
+  if (tg.amenity === "drinking_water" && tg.drinking_water === "no") return null;
   // drinking_water=yes an Restaurants, Hotels, Campingplätzen usw. ist nicht unbedingt gratis für alle
-  const isWaterThing = t.amenity === "drinking_water" || t.man_made === "drinking_fountain" || !!t.fountain ||
-    /^(water_tap|water_well)$/.test(t.man_made || "") || t.natural === "spring" ||
-    /^(water_point|fountain|toilets|shelter|grave_yard|bbq)$/.test(t.amenity || "") || t.landuse === "cemetery" ||
-    /^(playground|park|picnic_table|fitness_station)$/.test(t.leisure || "") || /^(picnic_site|viewpoint)$/.test(t.tourism || "") || t.highway === "rest_area";
-  if (!isWaterThing && t["drinking_water:refill"] !== "yes") return null;
-  const cat = classify(t);
-  const name = t.name || t["name:de"] || t["name:lb"] || t["name:fr"] || t["name:en"] || "";
-  const sub = SUBTYPE(t);
-  const broken = /^(broken|out_of_order|closed|needs_maintenance)$/.test(t.operational_status || "") || t.out_of_order === "yes" || t["operational_status"] === "no";
+  const isWaterThing = tg.amenity === "drinking_water" || tg.man_made === "drinking_fountain" || !!tg.fountain ||
+    /^(water_tap|water_well)$/.test(tg.man_made || "") || tg.natural === "spring" ||
+    /^(water_point|fountain|toilets|shelter|grave_yard|bbq)$/.test(tg.amenity || "") || tg.landuse === "cemetery" ||
+    /^(playground|park|picnic_table|fitness_station)$/.test(tg.leisure || "") || /^(picnic_site|viewpoint)$/.test(tg.tourism || "") || tg.highway === "rest_area";
+  if (!isWaterThing && tg["drinking_water:refill"] !== "yes") return null;
+  const cat = classify(tg);
+  const name = tg[NAME_KEY] || tg.name || tg["name:de"] || tg["name:lb"] || tg["name:fr"] || tg["name:en"] || "";
+  const sub = SUBTYPE(tg);
+  const broken = /^(broken|out_of_order|closed|needs_maintenance)$/.test(tg.operational_status || "") || tg.out_of_order === "yes" || tg.operational_status === "no";
   return {
     id: el.type[0] + el.id, osmType: el.type, osmId: el.id,
-    lat, lon, t, cat, name, sub,
+    lat, lon, t: tg, cat, name, sub,
     title: name || sub,
     broken,
-    winterOk: t.indoor === "yes" || cat === "refill" || t.seasonal === "no" || t.opening_hours === "24/7" && t.seasonal !== "yes",
-    search: norm([name, sub, t.operator, t["addr:street"], t["addr:city"], t.description].join(" "))
+    winterOk: tg.indoor === "yes" || cat === "refill" || tg.seasonal === "no" || (tg.opening_hours === "24/7" && tg.seasonal !== "yes"),
+    search: norm([name, tg.name, sub, tg.operator, tg["addr:street"], tg["addr:city"], tg.description].join(" "))
   };
 }
 
 /* ---------------- Zustand ---------------- */
 const state = {
-  items: [], byId: new Map(), visible: [],
+  items: [], byId: new Map(), visible: [], places: [],
   on: { brunnen: true, refill: true, hahn: true, quelle: true },
   favs: new Set(store.get(FAV_KEY, [])),
-  ref: null, refMode: "center", user: null, place: null,
+  refMode: "center", user: null, place: null,
   sel: null, tab: "list", listLimit: 30, osmStamp: null
 };
 
@@ -164,37 +168,35 @@ const map = L.map("map", {
 });
 map.attributionControl.setPrefix(false);
 
-// Ebenen: Kacheln (200) < Maske (350) < Straßennamen ab Zoom 15 (360) < Marker (600) < Ortsnamen (640)
+// Ebenen: Karte (200) < Maske (350) < Ortsnamen auf Satellit (360) < Route (400) < Marker (600)
 map.createPane("mask"); map.getPane("mask").style.zIndex = 350; map.getPane("mask").style.pointerEvents = "none";
 map.createPane("tilelabels"); map.getPane("tilelabels").style.zIndex = 360; map.getPane("tilelabels").style.pointerEvents = "none";
-map.createPane("placelabels"); map.getPane("placelabels").style.zIndex = 640; map.getPane("placelabels").style.pointerEvents = "none";
-const OFM_ATTR = '<a href="https://openfreemap.org" target="_blank" rel="noopener">OpenFreeMap</a> © <a href="https://www.openmaptiles.org/" target="_blank" rel="noopener">OpenMapTiles</a> Daten von <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>';
-const LABEL_MIN_Z = 15;
+const OFM_ATTR = '<a href="https://openfreemap.org" target="_blank" rel="noopener">OpenFreeMap</a> © <a href="https://www.openmaptiles.org/" target="_blank" rel="noopener">OpenMapTiles</a> ' + t("Daten von") + ' <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>';
 // Vektorkarten von OpenFreeMap (kostenlos, ohne Schlüssel), über MapLibre in Leaflet eingebunden
-function vectorBase(style) {
+function vectorBase(lightStyle, darkStyle) {
   return {
-    make: () => L.maplibreGL({ style: `https://tiles.openfreemap.org/styles/${style}`, attributionControl: { customAttribution: OFM_ATTR }, interactive: false }),
+    make: () => L.maplibreGL({ style: `https://tiles.openfreemap.org/styles/${isDark() ? darkStyle : lightStyle}`, attributionControl: { customAttribution: OFM_ATTR }, interactive: false }),
     layer: null
   };
 }
 const BASES = {
-  karte: vectorBase("liberty"),
-  hell: vectorBase("positron"),
+  karte: vectorBase("liberty", "dark"),
+  hell: vectorBase("positron", "positron"),
   satellit: { make: () => L.layerGroup([
-      L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", { maxZoom: 19, crossOrigin: "anonymous", attribution: "Bilder © Esri, Maxar, Earthstar Geographics" }),
+      L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", { maxZoom: 19, crossOrigin: "anonymous", attribution: t("Bilder") + " © Esri, Maxar, Earthstar Geographics" }),
       L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}", { maxZoom: 19, pane: "tilelabels", crossOrigin: "anonymous" })
     ]), layer: null }
 };
-const BASE_NAMES = { karte: "Karte", hell: "Hell", satellit: "Satellit" };
+const BASE_NAMES = { karte: t("Karte"), hell: t("Hell"), satellit: t("Satellit") };
 let base = store.get("aqua-base-v3", "karte");
 if (!BASES[base]) base = "karte";
-// Beschriftungen auf Deutsch, sonst der Name vor Ort (wie bei Google Maps auf Deutsch)
+// Beschriftungen in der gewählten Sprache, sonst der Name vor Ort
 function localizeLabels(gl) {
   try {
     for (const l of gl.getStyle().layers) {
       if (l.type !== "symbol" || !l.layout || !l.layout["text-field"]) continue;
       const tf = JSON.stringify(l.layout["text-field"]);
-      if (tf.includes("name")) gl.setLayoutProperty(l.id, "text-field", ["coalesce", ["get", "name:de"], ["get", "name"]]);
+      if (tf.includes("name")) gl.setLayoutProperty(l.id, "text-field", ["coalesce", ["get", NAME_KEY], ["get", "name"]]);
     }
   } catch (e) { /* Stil noch nicht bereit */ }
 }
@@ -219,8 +221,13 @@ useBase(base);
 
 // Luxemburg hervorheben, Nachbarländer leicht abdunkeln
 const luLatLngs = LU_RING.map(([x, y]) => [y, x]);
-L.polygon([[[-89, -179], [-89, 179], [89, 179], [89, -179]], luLatLngs], { pane: "mask", stroke: false, fillColor: "#13304D", fillOpacity: 0.16, interactive: false }).addTo(map);
+const maskLayer = L.polygon([[[-89, -179], [-89, 179], [89, 179], [89, -179]], luLatLngs], { pane: "mask", stroke: false, fillColor: "#13304D", fillOpacity: 0.16, interactive: false }).addTo(map);
 L.polygon(luLatLngs, { pane: "mask", fill: false, color: "#00A3E0", weight: 2.5, opacity: 0.9, interactive: false }).addTo(map);
+function themeMap(rebuild) {
+  maskLayer.setStyle(isDark() ? { fillColor: "#000", fillOpacity: 0.32 } : { fillColor: "#13304D", fillOpacity: 0.16 });
+  if (rebuild && BASES.karte.layer) { const active = base === "karte"; if (active) map.removeLayer(BASES.karte.layer); BASES.karte.layer = null; if (active) useBase("karte"); }
+}
+themeMap(false);
 
 function sidePad() {
   if (isMobile()) {
@@ -230,17 +237,20 @@ function sidePad() {
   return { paddingTopLeft: [parseInt(getComputedStyle(document.documentElement).getPropertyValue("--side-w")) + 32, 20], paddingBottomRight: [20, 20] };
 }
 
-L.control.zoom({ position: "bottomright", zoomInTitle: "Hineinzoomen", zoomOutTitle: "Herauszoomen" }).addTo(map);
+L.control.zoom({ position: "bottomright", zoomInTitle: t("Hineinzoomen"), zoomOutTitle: t("Herauszoomen") }).addTo(map);
 
 const MapCtl = L.Control.extend({
   options: { position: "bottomright" },
   onAdd() {
     const box = L.DomUtil.create("div", "mapctl");
     box.innerHTML = `
-      <div class="layer-menu" id="layermenu" role="radiogroup" aria-label="Kartenstil" hidden>
+      <button class="mapbtn add-fab" type="button" data-go="add" aria-label="${esc(t("Fehlende Wasserstelle eintragen"))}" title="${esc(t("Fehlende Wasserstelle eintragen"))}">
+        <svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg>
+      </button>
+      <div class="layer-menu" id="layermenu" role="radiogroup" aria-label="${esc(t("Kartenstil"))}" hidden>
         ${Object.keys(BASES).map((k) => `<button type="button" role="radio" data-base="${k}" aria-checked="${k === base}">${BASE_NAMES[k]}</button>`).join("")}
       </div>
-      <button class="mapbtn" type="button" id="layerbtn" aria-label="Kartenstil wählen" aria-expanded="false" title="Kartenstil">
+      <button class="mapbtn" type="button" id="layerbtn" aria-label="${esc(t("Kartenstil wählen"))}" aria-expanded="false" title="${esc(t("Kartenstil"))}">
         <svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 2.5 8 12 13l9.5-5z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="m2.5 12.5 9.5 5 9.5-5M2.5 16.5l9.5 5 9.5-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>
       </button>`;
     L.DomEvent.disableClickPropagation(box);
@@ -297,14 +307,14 @@ async function fetchOverpass() {
       });
       if (!res.ok) throw new Error("HTTP " + res.status);
       const json = await res.json();
-      if (!json || !Array.isArray(json.elements)) throw new Error("Unerwartete Antwort");
+      if (!json || !Array.isArray(json.elements)) throw new Error("bad response");
       if (json.remark && /runtime error|timed out/i.test(json.remark) && !json.elements.length) throw new Error(json.remark);
       return json;
     } catch (e) {
       lastErr = e;
     } finally { clearTimeout(timer); }
   }
-  throw lastErr || new Error("Keine Verbindung");
+  throw lastErr || new Error("offline");
 }
 
 function ingest(json) {
@@ -321,7 +331,7 @@ function ingest(json) {
   state.places = places;
   assignLocality(items, places);
   state.byId = new Map(items.map((i) => [i.id, i]));
-  state.osmStamp = json.osm3s && json.osm3s.timestamp_osm_base || null;
+  state.osmStamp = (json.osm3s && json.osm3s.timestamp_osm_base) || null;
   for (const it of items) {
     it.marker = L.marker([it.lat, it.lon], { icon: pinIcon(it, false), title: it.title, alt: it.title, keyboard: true, riseOnHover: true });
     it.marker.on("click", () => select(it.id, { from: "map" }));
@@ -331,10 +341,10 @@ function ingest(json) {
 /* ---------------- Ortsnamen ---------------- */
 const PLACE_RANK = { city: 0, town: 1, village: 2, suburb: 3, quarter: 4 };
 function toPlace(el) {
-  const t = el.tags;
-  const name = t["name:de"] || t.name || t["name:fr"] || t["name:lb"];
+  const tg = el.tags;
+  const name = tg[NAME_KEY] || tg.name || tg["name:de"] || tg["name:fr"] || tg["name:lb"];
   if (!name || el.lat == null) return null;
-  return { name, lat: el.lat, lon: el.lon, kind: t.place, rank: PLACE_RANK[t.place], pop: parseInt(String(t.population || "0").replace(/\D/g, ""), 10) || 0, n: norm(name) };
+  return { name, lat: el.lat, lon: el.lon, kind: tg.place, rank: PLACE_RANK[tg.place], pop: parseInt(String(tg.population || "0").replace(/\D/g, ""), 10) || 0, n: norm(name), n2: norm(tg.name || "") };
 }
 function assignLocality(items, places) {
   const cosL = Math.cos(49.7 * Math.PI / 180);
@@ -350,8 +360,6 @@ function assignLocality(items, places) {
     if (loc) it.search += " " + norm(loc);
   }
 }
-// Ortsnamen zeichnet jetzt die Vektorkarte selbst (wie bei Google Maps)
-function drawLabels() {}
 
 function setBusy(b) {
   $("#reload").setAttribute("aria-busy", String(b));
@@ -367,7 +375,7 @@ async function load(force) {
   if (!navigator.onLine) { showOffline(haveCache ? cached.t : null); return; }
   if (!force && haveCache && Date.now() - cached.t < CACHE_FRESH_MS) return;
   setBusy(true); $("#err").hidden = true; $("#err").classList.add("error");
-  if (!state.items.length) { $("#count").textContent = "Wasserstellen werden geladen …"; $("#stamp").textContent = "Daten kommen live aus OpenStreetMap. Das dauert ein paar Sekunden."; }
+  if (!state.items.length) { $("#count").textContent = t("Wasserstellen werden geladen …"); $("#stamp").textContent = t("Daten kommen live aus OpenStreetMap. Das dauert ein paar Sekunden."); }
   try {
     const json = await fetchOverpass();
     // Nur die nötigen Felder zwischenspeichern
@@ -377,26 +385,24 @@ async function load(force) {
     cluster.clearLayers();
     ingest(slim); afterData();
     if (selId && state.byId.has(selId)) select(selId, { quiet: true });
-    if (force) toast("Daten aktualisiert");
+    if (force) toast(t("Daten aktualisiert"));
   } catch (e) {
     const err = $("#err");
-    err.innerHTML = haveCache
-      ? `<p>Neue Daten konnten nicht geladen werden. Du siehst den gespeicherten Stand. <button class="retry" type="button">Erneut versuchen</button></p>`
-      : `<p>Die Wasserstellen konnten nicht geladen werden. Die OpenStreetMap-Server sind gerade nicht erreichbar oder es besteht keine Internetverbindung. <button class="retry" type="button">Erneut versuchen</button></p>`;
+    err.innerHTML = `<p>${esc(haveCache ? t("Neue Daten konnten nicht geladen werden. Du siehst den gespeicherten Stand.") : t("Die Wasserstellen konnten nicht geladen werden. Die OpenStreetMap-Server sind gerade nicht erreichbar oder es besteht keine Internetverbindung."))} <button class="retry" type="button">${esc(t("Erneut versuchen"))}</button></p>`;
     err.hidden = false;
     err.querySelector(".retry").onclick = () => load(true);
-    if (!haveCache) { $("#count").textContent = "Keine Daten geladen"; $("#stamp").textContent = ""; }
+    if (!haveCache) { $("#count").textContent = t("Keine Daten geladen"); $("#stamp").textContent = ""; }
   } finally { setBusy(false); }
 }
 
-function showOffline(t) {
+function showOffline(ts) {
   const err = $("#err");
-  err.classList.toggle("error", !t);
-  err.innerHTML = t
-    ? `<p>Du bist offline. Aqua Map zeigt die gespeicherten Wasserstellen vom ${new Date(t).toLocaleDateString("de-DE")}. Kartenbereiche, die du schon angesehen hast, funktionieren auch ohne Internet.</p>`
-    : `<p>Du bist offline und es sind noch keine Wasserstellen gespeichert. Öffne Aqua Map einmal mit Internetverbindung, danach klappt es auch offline.</p>`;
+  err.classList.toggle("error", !ts);
+  err.innerHTML = `<p>${esc(ts
+    ? t("Du bist offline. Aqua Map zeigt die gespeicherten Wasserstellen vom {date}. Kartenbereiche, die du schon angesehen hast, funktionieren auch ohne Internet.", { date: new Date(ts).toLocaleDateString(LOC()) })
+    : t("Du bist offline und es sind noch keine Wasserstellen gespeichert. Öffne Aqua Map einmal mit Internetverbindung, danach klappt es auch offline."))}</p>`;
   err.hidden = false;
-  if (!t) { $("#count").textContent = "Keine Daten gespeichert"; $("#stamp").textContent = ""; }
+  if (!ts) { $("#count").textContent = t("Keine Daten gespeichert"); $("#stamp").textContent = ""; }
   setBusy(false);
 }
 window.addEventListener("offline", () => { const c = store.get(CACHE_KEY, null); showOffline(c ? c.t : null); });
@@ -424,7 +430,7 @@ function renderChips() {
   const counts = { brunnen: 0, refill: 0, hahn: 0, quelle: 0 };
   for (const it of state.items) if (!(F.broken.checked && it.broken)) counts[it.cat]++;
   $("#chips").innerHTML = Object.entries(CATS).map(([k, c]) =>
-    `<button type="button" class="chip" data-cat="${k}" aria-pressed="${state.on[k]}" style="--c:${c.color}"><span class="dot"></span>${c.label} <span class="n">${counts[k]}</span></button>`
+    `<button type="button" class="chip" data-cat="${k}" aria-pressed="${state.on[k]}" style="--c:${c.color}"><span class="dot"></span>${esc(c.label)} <span class="n">${num(counts[k])}</span></button>`
   ).join("");
 }
 $("#chips").addEventListener("click", (e) => {
@@ -436,15 +442,16 @@ $("#chips").addEventListener("click", (e) => {
 Object.values(F).forEach((el) => el.addEventListener("change", () => { state.listLimit = 30; applyFilters(); }));
 
 function renderCount() {
-  const base = F.broken.checked ? state.items.filter((i) => !i.broken) : state.items;
-  const hiddenBroken = state.items.length - base.length;
-  const total = base.length, vis = state.visible.length;
+  const basis = F.broken.checked ? state.items.filter((i) => !i.broken) : state.items;
+  const hiddenBroken = state.items.length - basis.length;
+  const total = basis.length, vis = state.visible.length;
   $("#count").textContent = total === vis
-    ? `${total.toLocaleString("de-DE")} Wasserstellen in Luxemburg`
-    : `${vis.toLocaleString("de-DE")} von ${total.toLocaleString("de-DE")} Wasserstellen angezeigt`;
+    ? t("{n} Wasserstellen in Luxemburg", { n: num(total) })
+    : t("{a} von {b} Wasserstellen angezeigt", { a: num(vis), b: num(total) });
   if (state.osmStamp) {
     const d = new Date(state.osmStamp);
-    $("#stamp").textContent = `OpenStreetMap-Daten vom ${d.toLocaleDateString("de-DE")}, ${d.toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" })} Uhr` + (hiddenBroken ? `. ${hiddenBroken} als defekt gemeldete ausgeblendet.` : "");
+    $("#stamp").textContent = t("OpenStreetMap-Daten vom {date}, {time} Uhr", { date: d.toLocaleDateString(LOC()), time: d.toLocaleTimeString(LOC(), { hour: "2-digit", minute: "2-digit" }) })
+      + (hiddenBroken ? " " + t("{n} als defekt gemeldete ausgeblendet.", { n: hiddenBroken }) : "");
   }
 }
 
@@ -458,44 +465,45 @@ function rowHTML(it, d) {
   const extras = [];
   if (it.locality) extras.push(it.locality);
   if (it.name && it.sub) extras.push(it.sub);
-  if (it.t.bottle === "yes" || it.t.fountain === "bottle_refill") extras.push("Flasche befüllbar");
-  if (it.t.wheelchair === "yes") extras.push("rollstuhlgerecht");
-  if (it.broken) extras.push("als defekt gemeldet");
+  if (it.t.bottle === "yes" || it.t.fountain === "bottle_refill") extras.push(t("Flasche befüllbar"));
+  if (it.t.wheelchair === "yes") extras.push(t("rollstuhlgerecht"));
+  if (it.broken) extras.push(t("als defekt gemeldet"));
   const street = [it.t["addr:street"], it.t["addr:housenumber"]].filter(Boolean).join(" ");
-  const sub = extras.join(", ") || street || (it.t.operator ? "Betreiber: " + it.t.operator : "Öffentlich und kostenlos");
-  const walk = d != null ? fmtWalk(d) : "";
+  const sub = extras.join(", ") || street || (it.t.operator ? t("Betreiber") + ": " + it.t.operator : t("Öffentlich und kostenlos"));
+  const showWalk = d != null && d < 5000;
   return `<li><button type="button" class="row${state.sel === it.id ? " sel" : ""}" data-id="${it.id}">
     ${dropSVG(it.cat, 22)}
     <span class="row-main"><span class="row-title">${esc(it.title)}${it.broken ? '<span class="warn-dot" aria-hidden="true"></span>' : ""}</span><span class="row-sub">${esc(sub)}</span></span>
-    ${d != null ? `<span class="row-dist">${fmtDist(d)}${walk && d < 5000 ? `<small>${walk.replace(" zu Fuß", "")}</small>` : ""}</span>` : ""}
+    ${d != null ? `<span class="row-dist">${fmtDist(d)}${showWalk ? `<small>${esc(t("{n} Min.", { n: walkMin(d) }))}</small>` : ""}</span>` : ""}
   </button></li>`;
 }
 
+function favTabLabel() { return state.favs.size ? t("Gemerkt ({n})", { n: state.favs.size }) : t("Gemerkt"); }
 function renderList() {
   const list = $("#list"), head = $("#listhead");
-  $("#tab-fav").textContent = state.favs.size ? `Gemerkt (${state.favs.size})` : "Gemerkt";
+  $("#tab-fav").textContent = favTabLabel();
   if (!state.items.length) { list.innerHTML = ""; head.textContent = ""; return; }
   const ref = currentRef();
   if (state.tab === "fav") {
     const favs = [...state.favs].map((id) => state.byId.get(id)).filter(Boolean)
       .map((it) => ({ it, d: haversine(ref, L.latLng(it.lat, it.lon)) })).sort((a, b) => a.d - b.d);
-    head.textContent = favs.length ? "Deine gemerkten Wasserstellen, nach Entfernung sortiert" : "";
+    head.textContent = favs.length ? t("Deine gemerkten Wasserstellen, nach Entfernung sortiert") : "";
     list.innerHTML = favs.length ? favs.map(({ it, d }) => rowHTML(it, d)).join("")
-      : `<li class="empty">Noch nichts gemerkt. Öffne eine Wasserstelle und tippe auf „Merken“. Die Liste bleibt in diesem Browser gespeichert.</li>`;
+      : `<li class="empty">${esc(t("Noch nichts gemerkt. Öffne eine Wasserstelle und tippe auf „Merken“. Die Liste bleibt in diesem Browser gespeichert."))}</li>`;
     return;
   }
   if (!state.visible.length) {
     head.textContent = "";
-    list.innerHTML = `<li class="empty">Keine Wasserstelle passt zu diesen Filtern.<br><button type="button" class="act" id="resetf" style="padding:0 14px;display:inline-flex">Filter zurücksetzen</button></li>`;
+    list.innerHTML = `<li class="empty">${esc(t("Keine Wasserstelle passt zu diesen Filtern."))}<br><button type="button" class="act" id="resetf" style="padding:0 14px;display:inline-flex;margin-top:8px">${esc(t("Filter zurücksetzen"))}</button></li>`;
     $("#resetf").onclick = resetFilters; return;
   }
   const ranked = state.visible.map((it) => ({ it, d: haversine(ref, L.latLng(it.lat, it.lon)) })).sort((a, b) => a.d - b.d);
-  head.textContent = state.refMode === "user" && state.user ? "Am nächsten zu deinem Standort"
-    : state.refMode === "place" && state.place ? `Am nächsten zu ${state.place.label}`
-    : "Am nächsten zur Kartenmitte. Verschiebe die Karte oder suche einen Ort.";
+  head.textContent = state.refMode === "user" && state.user ? t("Am nächsten zu deinem Standort")
+    : state.refMode === "place" && state.place ? t("Am nächsten zu {place}", { place: state.place.label })
+    : t("Am nächsten zur Kartenmitte. Verschiebe die Karte oder suche einen Ort.");
   const shown = ranked.slice(0, state.listLimit);
   list.innerHTML = shown.map(({ it, d }) => rowHTML(it, d)).join("") +
-    (ranked.length > shown.length ? `<li><button type="button" class="more-rows" id="morerows">Weitere ${Math.min(30, ranked.length - shown.length)} anzeigen</button></li>` : "");
+    (ranked.length > shown.length ? `<li><button type="button" class="more-rows" id="morerows">${esc(t("Weitere {n} anzeigen", { n: Math.min(30, ranked.length - shown.length) }))}</button></li>` : "");
   const mr = $("#morerows"); if (mr) mr.onclick = () => { state.listLimit += 30; renderList(); };
 }
 function scrollToList() {
@@ -510,9 +518,9 @@ function resetFilters() {
 $("#list").addEventListener("click", (e) => {
   const b = e.target.closest(".row"); if (b) select(b.dataset.id, { from: "list" });
 });
-document.querySelectorAll(".tab").forEach((t) => t.addEventListener("click", () => {
-  state.tab = t.id === "tab-fav" ? "fav" : "list";
-  document.querySelectorAll(".tab").forEach((x) => x.setAttribute("aria-selected", String(x === t)));
+document.querySelectorAll(".tab").forEach((tb) => tb.addEventListener("click", () => {
+  state.tab = tb.id === "tab-fav" ? "fav" : "list";
+  document.querySelectorAll(".tab").forEach((x) => x.setAttribute("aria-selected", String(x === tb)));
   closeDetail(); renderList();
 }));
 
@@ -531,6 +539,16 @@ function updateAddLink() {
 
 /* ---------------- Auswahl & Details ---------------- */
 let selMarker = null;
+function placeInView(latlng, z) {
+  const pad = sidePad();
+  // Punkt so platzieren, dass er nicht unter Leiste oder Sheet liegt
+  const size = map.getSize();
+  const cx = (pad.paddingTopLeft[0] + size.x - pad.paddingBottomRight[0]) / 2;
+  const cy = (pad.paddingTopLeft[1] + size.y - pad.paddingBottomRight[1]) / 2;
+  const target = map.project(latlng, z).subtract([cx - size.x / 2, cy - size.y / 2]);
+  const ll = map.unproject(target, z);
+  if (reduceMotion) map.setView(ll, z); else map.flyTo(ll, z, { duration: 0.6 });
+}
 function select(id, opts = {}) {
   const it = state.byId.get(id); if (!it) return;
   if (selMarker && selMarker !== it.marker) {
@@ -539,32 +557,26 @@ function select(id, opts = {}) {
   state.sel = id; selMarker = it.marker;
   it.marker.setIcon(pinIcon(it, true));
   it.marker.setZIndexOffset(1000);
-  try { history.replaceState(null, "", "#" + id); } catch (e) {}
+  try { history.replaceState(null, "", "#" + id); } catch (e) { /* egal */ }
+  const hasRoute = typeof route !== "undefined" && route.it;
+  if (hasRoute && route.it.id !== id) endRoute(true);
+  $("#view-detail").classList.remove("has-route");
   renderDetail(it);
-  if (opts.from !== "map" || map.getZoom() < 15) {
-    const z = Math.max(map.getZoom(), 16);
-    const show = () => {
-      const pad = sidePad();
-      // Punkt so platzieren, dass er nicht unter Leiste oder Sheet liegt
-      const size = map.getSize();
-      const cx = (pad.paddingTopLeft[0] + size.x - pad.paddingBottomRight[0]) / 2;
-      const cy = (pad.paddingTopLeft[1] + size.y - pad.paddingBottomRight[1]) / 2;
-      const target = map.project([it.lat, it.lon], z).subtract([cx - size.x / 2, cy - size.y / 2]);
-      const ll = map.unproject(target, z);
-      if (reduceMotion) map.setView(ll, z); else map.flyTo(ll, z, { duration: 0.6 });
-    };
-    if (!state.visible.includes(it)) { cluster.addLayer(it.marker); }
-    show();
-  }
+  if (typeof route !== "undefined" && route.it) renderRouteBox();
   if (isMobile() && sheetState === "peek") setSheet("half");
+  if (opts.from !== "map" || map.getZoom() < 15) {
+    if (!state.visible.includes(it)) cluster.addLayer(it.marker);
+    placeInView([it.lat, it.lon], Math.max(map.getZoom(), 16));
+  }
 }
 
 function closeDetail() {
   $("#view-detail").hidden = true; $("#view-list").hidden = false;
   $("#sheet").classList.remove("in-detail");
+  if (typeof endRoute === "function") endRoute(true);
   if (state.sel) { const prev = state.byId.get(state.sel); if (prev) { prev.marker.setIcon(pinIcon(prev, false)); prev.marker.setZIndexOffset(0); } }
   state.sel = null; selMarker = null;
-  try { history.replaceState(null, "", location.pathname + location.search); } catch (e) {}
+  try { history.replaceState(null, "", location.pathname + location.search); } catch (e) { /* egal */ }
   renderList();
 }
 
@@ -574,85 +586,94 @@ const LBL = {
   seasonal: { yes: "Saisonal, nicht ganzjährig", no: "Ganzjährig", summer: "Nur im Sommer", spring: "Nur im Frühling", autumn: "Nur im Herbst", winter: "Nur im Winter", dry_season: "Nur in der Trockenzeit" },
   access: { yes: "Öffentlich", permissive: "Öffentlich zugänglich", customers: "Nur für Kundschaft", designated: "Öffentlich" }
 };
-function seasonText(t) {
-  if (t.seasonal) return LBL.seasonal[t.seasonal] || t.seasonal;
-  return null;
-}
+const lbl = (group, v) => (LBL[group][v] ? t(LBL[group][v]) : null);
+function seasonText(tg) { return tg.seasonal ? (lbl("seasonal", tg.seasonal) || tg.seasonal) : null; }
+const DAYS = {
+  de: { Mo: "Mo", Tu: "Di", We: "Mi", Th: "Do", Fr: "Fr", Sa: "Sa", Su: "So", PH: "Feiertage", off: "geschlossen" },
+  fr: { Mo: "lun.", Tu: "mar.", We: "mer.", Th: "jeu.", Fr: "ven.", Sa: "sam.", Su: "dim.", PH: "jours fériés", off: "fermé" },
+  en: { Mo: "Mon", Tu: "Tue", We: "Wed", Th: "Thu", Fr: "Fri", Sa: "Sat", Su: "Sun", PH: "public holidays", off: "closed" },
+  lb: { Mo: "Méi.", Tu: "Dën.", We: "Mët.", Th: "Don.", Fr: "Fre.", Sa: "Sam.", Su: "Son.", PH: "Feierdeeg", off: "zou" }
+};
 function hoursText(h) {
   if (!h) return null;
-  if (h === "24/7") return "Rund um die Uhr";
-  return h.replace(/\bTu\b/g, "Di").replace(/\bWe\b/g, "Mi").replace(/\bTh\b/g, "Do").replace(/\bSu\b/g, "So").replace(/PH/g, "Feiertage").replace(/\boff\b/g, "geschlossen");
+  if (h === "24/7") return t("Rund um die Uhr");
+  return h.replace(/\b(Mo|Tu|We|Th|Fr|Sa|Su|PH|off)\b/g, (m) => DAYS[LANG][m] || m);
 }
-function photoURL(t) {
-  const wc = t.wikimedia_commons;
+function photoURL(tg) {
+  const wc = tg.wikimedia_commons;
   if (wc && /^File:/i.test(wc)) return `https://commons.wikimedia.org/wiki/Special:FilePath/${encodeURIComponent(wc.replace(/^File:/i, ""))}?width=640`;
-  const img = t.image || "";
+  const img = tg.image || "";
   if (/^https?:\/\/.+\.(jpe?g|png|webp)(\?.*)?$/i.test(img)) return img;
   const m = /commons\.wikimedia\.org\/wiki\/(File:[^?#]+)/i.exec(img);
   if (m) return `https://commons.wikimedia.org/wiki/Special:FilePath/${encodeURIComponent(decodeURIComponent(m[1]).replace(/^File:/i, ""))}?width=640`;
   return null;
 }
+const ICON_ROUTE = '<svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><circle cx="6" cy="18" r="2.4" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="18" cy="6" r="2.4" fill="none" stroke="currentColor" stroke-width="2"/><path d="M8.4 18H15a3 3 0 0 0 0-6H9a3 3 0 0 1 0-6h6.6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>';
 
 function renderDetail(it) {
-  const t = it.t, ref = currentRef(), d = haversine(ref, L.latLng(it.lat, it.lon));
+  const tg = it.t, ref = currentRef(), d = haversine(ref, L.latLng(it.lat, it.lon));
   const fav = state.favs.has(it.id);
-  const addrParts = [ [t["addr:street"], t["addr:housenumber"]].filter(Boolean).join(" "), [t["addr:postcode"] && "L-" + String(t["addr:postcode"]).replace(/^L-?/i, ""), t["addr:city"]].filter(Boolean).join(" ") ].filter(Boolean);
+  const addrParts = [[tg["addr:street"], tg["addr:housenumber"]].filter(Boolean).join(" "), [tg["addr:postcode"] && "L-" + String(tg["addr:postcode"]).replace(/^L-?/i, ""), tg["addr:city"]].filter(Boolean).join(" ")].filter(Boolean);
   const facts = [];
-  const add = (k, v) => { if (v) facts.push(`<dt>${k}</dt><dd>${esc(v)}</dd>`); };
+  const add = (k, v) => { if (v) facts.push(`<dt>${esc(t(k))}</dt><dd>${esc(v)}</dd>`); };
   add("Art", it.sub);
-  add("Flasche befüllen", LBL.bottle[t.bottle] || (t.fountain === "bottle_refill" ? "Ja" : null));
-  add("Barrierefreiheit", LBL.wheelchair[t.wheelchair]);
-  add("Saison", seasonText(t));
-  add("Öffnungszeiten", hoursText(t.opening_hours));
-  add("Lage", t.indoor === "yes" ? ("Im Gebäude" + (t.level ? `, Etage ${t.level}` : "")) : (t.covered === "yes" ? "Überdacht" : null));
-  add("Zugang", LBL.access[t.access]);
-  add("Wasser", t.drinking_water === "treated" ? "Aufbereitetes Trinkwasser" : (t["drinking_water:legal"] === "yes" ? "Amtlich geprüftes Trinkwasser" : null));
-  add("Temperatur", t.warm_water === "yes" || t.hot_water === "yes" ? "Kalt und warm" : (t.cold_water === "yes" ? "Kalt" : null));
-  add("Für Hunde", t.dog === "yes" ? "Mit Hundenapf" : null);
-  add("Betreiber", t.operator);
-  add("Beschreibung", t["description:de"] || t.description || t["description:fr"] || t["description:lb"]);
-  add("Zuletzt geprüft", fmtDate(t.check_date || t["survey:date"] || t["check_date:drinking_water"]));
-  const photo = photoURL(t);
+  add("Flasche befüllen", lbl("bottle", tg.bottle) || (tg.fountain === "bottle_refill" ? t("Ja") : null));
+  add("Barrierefreiheit", lbl("wheelchair", tg.wheelchair));
+  add("Saison", seasonText(tg));
+  add("Öffnungszeiten", hoursText(tg.opening_hours));
+  add("Lage", tg.indoor === "yes" ? (t("Im Gebäude") + (tg.level ? ", " + t("Etage {n}", { n: tg.level }) : "")) : (tg.covered === "yes" ? t("Überdacht") : null));
+  add("Zugang", lbl("access", tg.access));
+  add("Wasser", tg.drinking_water === "treated" ? t("Aufbereitetes Trinkwasser") : (tg["drinking_water:legal"] === "yes" ? t("Amtlich geprüftes Trinkwasser") : null));
+  add("Temperatur", tg.warm_water === "yes" || tg.hot_water === "yes" ? t("Kalt und warm") : (tg.cold_water === "yes" ? t("Kalt") : null));
+  add("Für Hunde", tg.dog === "yes" ? t("Mit Hundenapf") : null);
+  add("Betreiber", tg.operator);
+  add("Beschreibung", tg["description:" + LANG] || tg.description || tg["description:de"] || tg["description:fr"]);
+  add("Zuletzt geprüft", fmtDate(tg.check_date || tg["survey:date"] || tg["check_date:drinking_water"]));
+  const photo = photoURL(tg);
 
   let hint = "";
-  if (it.cat === "refill") hint = `<p class="hint">Teilnehmender Betrieb: Frag einfach nach, hier wird deine Flasche gratis mit Leitungswasser gefüllt.</p>`;
-  if (it.cat === "quelle" && t["drinking_water:legal"] !== "yes") hint = `<p class="hint warn">Natürliche Quelle oder Brunnen. Die Wasserqualität wird hier nicht unbedingt amtlich überwacht. Im Zweifel lieber nicht trinken.</p>`;
-  if (t["drinking_water:legal"] === "no") hint = `<p class="hint warn">Das Wasser ist hier nicht amtlich als Trinkwasser geprüft.</p>`;
-  if (it.broken) hint += `<p class="hint warn">Diese Wasserstelle wurde als außer Betrieb gemeldet${t.check_date ? ` (Stand ${esc(fmtDate(t.check_date))})` : ""}.</p>`;
+  if (it.cat === "refill") hint = `<p class="hint">${esc(t("Teilnehmender Betrieb: Frag einfach nach, hier wird deine Flasche gratis mit Leitungswasser gefüllt."))}</p>`;
+  if (it.cat === "quelle" && tg["drinking_water:legal"] !== "yes") hint = `<p class="hint warn">${esc(t("Natürliche Quelle oder Brunnen. Die Wasserqualität wird hier nicht unbedingt amtlich überwacht. Im Zweifel lieber nicht trinken."))}</p>`;
+  if (tg["drinking_water:legal"] === "no") hint = `<p class="hint warn">${esc(t("Das Wasser ist hier nicht amtlich als Trinkwasser geprüft."))}</p>`;
+  if (it.broken) hint += `<p class="hint warn">${esc(tg.check_date ? t("Diese Wasserstelle wurde als außer Betrieb gemeldet (Stand {date}).", { date: fmtDate(tg.check_date) }) : t("Diese Wasserstelle wurde als außer Betrieb gemeldet."))}</p>`;
 
-  const badges = [`<span class="badge free">Kostenlos</span>`];
-  if (t.bottle === "yes" || t.fountain === "bottle_refill") badges.push(`<span class="badge">Flasche befüllbar</span>`);
-  if (t.wheelchair === "yes") badges.push(`<span class="badge">Rollstuhlgerecht</span>`);
-  if (t.indoor === "yes") badges.push(`<span class="badge">Drinnen</span>`);
-  if (typeof profile !== "undefined" && profile.visits[it.id]) badges.push(`<span class="badge visited">Von dir besucht</span>`);
-  if (t.seasonal && t.seasonal !== "no") badges.push(`<span class="badge warn">${esc(seasonText(t))}</span>`);
+  const badges = [`<span class="badge free">${esc(t("Kostenlos"))}</span>`];
+  if (tg.bottle === "yes" || tg.fountain === "bottle_refill") badges.push(`<span class="badge">${esc(t("Flasche befüllbar"))}</span>`);
+  if (tg.wheelchair === "yes") badges.push(`<span class="badge">${esc(t("Rollstuhlgerecht"))}</span>`);
+  if (tg.indoor === "yes") badges.push(`<span class="badge">${esc(t("Drinnen"))}</span>`);
+  if (typeof profile !== "undefined" && profile.visits[it.id]) badges.push(`<span class="badge visited">${esc(t("Von dir besucht"))}</span>`);
+  if (tg.seasonal && tg.seasonal !== "no") badges.push(`<span class="badge warn">${esc(seasonText(tg))}</span>`);
 
   const g = `https://www.google.com/maps/dir/?api=1&destination=${it.lat},${it.lon}&travelmode=walking`;
   const a = `https://maps.apple.com/?daddr=${it.lat},${it.lon}&dirflg=w`;
   const osm = `https://www.openstreetmap.org/${it.osmType}/${it.osmId}`;
   const note = `https://www.openstreetmap.org/note/new?lat=${it.lat}&lon=${it.lon}#map=19/${it.lat}/${it.lon}`;
-  const showDist = state.refMode !== "center";
+  const distLine = state.refMode === "user" ? t("{dist} entfernt von dir", { dist: fmtDist(d) })
+    : state.refMode === "place" ? t("{dist} entfernt von {place}", { dist: fmtDist(d), place: state.place.label }) : "";
+  const typeLine = it.name && it.sub !== it.name ? it.sub : (CATS[it.cat].one === it.title ? t("Öffentlich und kostenlos") : CATS[it.cat].one);
 
   const v = $("#view-detail");
   v.innerHTML = `<div class="detail">
-    <button class="back" type="button" id="back"><svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 4 7 12l8 8" stroke="currentColor" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>Zurück zur Liste</button>
-    <div class="d-head">${dropSVG(it.cat, 34)}<div><h2 class="d-title" id="dtitle" tabindex="-1">${esc(it.title)}</h2>${it.name && it.sub !== it.name ? `<p class="d-type">${esc(it.sub)}</p>` : `<p class="d-type">${esc(CATS[it.cat].one === it.title ? "Öffentlich und kostenlos" : CATS[it.cat].one)}</p>`}</div></div>
-    <p class="d-addr${addrParts.length ? "" : " muted"}" id="daddr">${addrParts.length ? esc(addrParts.join(", ")) : it.locality ? "In " + esc(it.locality) : "Adresse wird gesucht …"}</p>
-    ${showDist ? `<p class="d-dist">${fmtDist(d)} entfernt${state.refMode === "user" ? " von dir" : state.refMode === "place" ? ` von ${esc(state.place.label)}` : " von der Kartenmitte"}${fmtWalk(d) ? `, ca. ${fmtWalk(d)}` : ""}</p>` : ""}
+    <button class="back" type="button" id="back"><svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 4 7 12l8 8" stroke="currentColor" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>${esc(t("Zurück zur Liste"))}</button>
+    <div class="d-head">${dropSVG(it.cat, 34)}<div><h2 class="d-title" id="dtitle" tabindex="-1">${esc(it.title)}</h2><p class="d-type">${esc(typeLine)}</p></div></div>
+    <p class="d-addr${addrParts.length ? "" : " muted"}" id="daddr">${addrParts.length ? esc(addrParts.join(", ")) : it.locality ? esc(t("In {place}", { place: it.locality })) : esc(t("Adresse wird gesucht …"))}</p>
+    ${distLine ? `<p class="d-dist">${esc(distLine)}${fmtWalk(d) ? `, ${esc(t("ca. {walk}", { walk: fmtWalk(d) }))}` : ""}</p>` : ""}
     <div class="badges">${badges.join("")}</div>
+    <div id="routebox"></div>
     <div class="actions">
-      <a class="act primary" href="${g}" target="_blank" rel="noopener"><svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11 21 3l-8 18-2-8z" fill="currentColor"/></svg>Route planen</a>
-      <a class="act" href="${a}" target="_blank" rel="noopener">Apple Karten</a>
-      <button class="act" type="button" id="favbtn" aria-pressed="${fav}">${fav ? "Gemerkt" : "Merken"}</button>
-      <button class="act" type="button" id="sharebtn">Link kopieren</button>
-      <button class="act" type="button" id="qrbtn">QR-Code</button>
+      <button class="act primary" type="button" id="routebtn">${ICON_ROUTE}${esc(t("Route hierhin"))}</button>
+      <button class="act" type="button" id="favbtn" aria-pressed="${fav}">${esc(fav ? t("Gemerkt") : t("Merken"))}</button>
+      <button class="act" type="button" id="qrbtn">${esc(t("QR-Code"))}</button>
+      <button class="act" type="button" id="sharebtn" style="grid-column:1 / -1">${esc(t("Link kopieren"))}</button>
     </div>
     ${hint}
-    ${photo ? `<img class="photo" src="${esc(photo)}" alt="Foto der Wasserstelle" loading="lazy" onerror="this.remove()">` : ""}
+    ${photo ? `<img class="photo" src="${esc(photo)}" alt="${esc(t("Foto der Wasserstelle"))}" loading="lazy" onerror="this.remove()">` : ""}
     <dl class="facts">${facts.join("")}</dl>
     <div class="d-links">
-      <a href="${osm}" target="_blank" rel="noopener">In OpenStreetMap ansehen</a>
-      <a href="${note}" target="_blank" rel="noopener">Fehler melden</a>
+      <a href="${g}" target="_blank" rel="noopener">${esc(t("In Google Maps öffnen"))}</a>
+      <a href="${a}" target="_blank" rel="noopener">${esc(t("In Apple Karten öffnen"))}</a>
+      <a href="${osm}" target="_blank" rel="noopener">${esc(t("In OpenStreetMap ansehen"))}</a>
+      <a href="${note}" target="_blank" rel="noopener">${esc(t("Fehler melden"))}</a>
     </div>
     <p class="coords">${it.lat.toFixed(5)}, ${it.lon.toFixed(5)}</p>
   </div>`;
@@ -663,6 +684,7 @@ function renderDetail(it) {
   $("#favbtn").onclick = () => toggleFav(it);
   $("#sharebtn").onclick = () => share(it);
   $("#qrbtn").onclick = () => showFountainQR(it);
+  $("#routebtn").onclick = () => routeTo(it);
   if (!addrParts.length) reverse(it);
   if (!isMobile()) $("#dtitle").focus({ preventScroll: true });
 }
@@ -671,13 +693,13 @@ function toggleFav(it) {
   if (state.favs.has(it.id)) state.favs.delete(it.id); else state.favs.add(it.id);
   store.set(FAV_KEY, [...state.favs]);
   const on = state.favs.has(it.id), b = $("#favbtn");
-  b.setAttribute("aria-pressed", String(on)); b.textContent = on ? "Gemerkt" : "Merken";
-  toast(on ? "Gemerkt" : "Nicht mehr gemerkt");
-  $("#tab-fav").textContent = state.favs.size ? `Gemerkt (${state.favs.size})` : "Gemerkt";
+  b.setAttribute("aria-pressed", String(on)); b.textContent = on ? t("Gemerkt") : t("Merken");
+  toast(on ? t("Gemerkt") : t("Nicht mehr gemerkt"));
+  $("#tab-fav").textContent = favTabLabel();
 }
 async function share(it) {
-  const url = location.href.split("#")[0] + "#" + it.id;
-  try { await navigator.clipboard.writeText(url); toast("Link kopiert"); }
+  const url = location.href.split("#")[0].split("?")[0] + "#" + it.id;
+  try { await navigator.clipboard.writeText(url); toast(t("Link kopiert")); }
   catch (e) { toast(url); }
 }
 
@@ -686,38 +708,50 @@ async function reverse(it) {
   const el = () => (state.sel === it.id ? $("#daddr") : null);
   if (revCache.has(it.id)) { const e = el(); if (e) { e.textContent = revCache.get(it.id); e.classList.remove("muted"); } return; }
   try {
-    const r = await fetch(`${PHOTON}/reverse?lat=${it.lat}&lon=${it.lon}&lang=de&limit=1`);
+    const r = await fetch(`${PHOTON}/reverse?lat=${it.lat}&lon=${it.lon}&lang=${PHOTON_LANG[LANG]}&limit=1`);
     const j = await r.json();
     const p = j.features && j.features[0] && j.features[0].properties;
-    let txt = "Keine Adresse gefunden";
+    let txt = it.locality ? t("In {place}", { place: it.locality }) : t("Keine Adresse gefunden");
     if (p) {
       const street = [p.street || p.name, p.housenumber].filter(Boolean).join(" ");
       const town = [p.postcode && "L-" + String(p.postcode).replace(/^L-?/i, ""), p.city || p.locality || p.district].filter(Boolean).join(" ");
-      txt = "Nahe " + [street, town].filter(Boolean).join(", ");
+      txt = t("Nahe {address}", { address: [street, town].filter(Boolean).join(", ") });
     }
     revCache.set(it.id, txt);
     const e = el(); if (e) { e.textContent = txt; e.classList.toggle("muted", !p); }
   } catch (e) {
-    const x = el(); if (x) x.textContent = "Adresse nicht verfügbar";
+    const x = el(); if (x && !it.locality) x.textContent = t("Adresse nicht verfügbar");
   }
 }
 
 /* ---------------- Standort ---------------- */
 let meMarker = null, meCircle = null;
+function showMe(ll, acc) {
+  if (meMarker) { meMarker.setLatLng(ll); meCircle.setLatLng(ll).setRadius(acc || 20); return; }
+  meCircle = L.circle(ll, { radius: acc || 20, color: "#E1251B", weight: 1, opacity: .4, fillColor: "#E1251B", fillOpacity: .08, interactive: false }).addTo(map);
+  meMarker = L.marker(ll, { icon: L.divIcon({ className: "wk-me", html: "<span></span>", iconSize: [18, 18] }), keyboard: false, interactive: false, zIndexOffset: 2000 }).addTo(map);
+}
+function getPosition() {
+  return new Promise((ok, bad) => {
+    if (!("geolocation" in navigator)) { bad(Object.assign(new Error("nogeo"), { code: 0 })); return; }
+    navigator.geolocation.getCurrentPosition((pos) => {
+      const ll = L.latLng(pos.coords.latitude, pos.coords.longitude);
+      state.user = ll; showMe(ll, pos.coords.accuracy); ok(ll);
+    }, bad, { enableHighAccuracy: true, timeout: 12000, maximumAge: 30000 });
+  });
+}
+function geoError(err) {
+  return !err || err.code === 0 ? t("Dein Browser kann den Standort nicht bestimmen. Suche stattdessen einen Ort.")
+    : err.code === 1 ? t("Standortzugriff verweigert. Du kannst oben einen Ort suchen.")
+    : t("Standort konnte nicht bestimmt werden. Suche stattdessen einen Ort.");
+}
 $("#locate").addEventListener("click", locate);
-function locate() {
-  if (!("geolocation" in navigator)) { toast("Dein Browser kann den Standort nicht bestimmen. Suche stattdessen einen Ort."); return; }
+async function locate() {
   const btn = $("#locate"); btn.setAttribute("aria-busy", "true");
-  navigator.geolocation.getCurrentPosition((pos) => {
-    btn.setAttribute("aria-busy", "false");
-    const ll = L.latLng(pos.coords.latitude, pos.coords.longitude);
-    state.user = ll; state.refMode = "user";
-    if (meMarker) { meMarker.setLatLng(ll); meCircle.setLatLng(ll).setRadius(pos.coords.accuracy); }
-    else {
-      meCircle = L.circle(ll, { radius: pos.coords.accuracy, color: "#E1251B", weight: 1, opacity: .4, fillColor: "#E1251B", fillOpacity: .08, interactive: false }).addTo(map);
-      meMarker = L.marker(ll, { icon: L.divIcon({ className: "wk-me", html: "<span></span>", iconSize: [18, 18] }), keyboard: false, interactive: false, zIndexOffset: 2000 }).addTo(map);
-    }
-    if (!LU_BOUNDS.pad(0.15).contains(ll)) toast("Du bist außerhalb von Luxemburg. Die Liste zeigt trotzdem die nächsten Stellen.");
+  try {
+    const ll = await getPosition();
+    state.refMode = "user";
+    if (!LU_BOUNDS.pad(0.15).contains(ll)) toast(t("Du bist außerhalb von Luxemburg. Die Liste zeigt trotzdem die nächsten Stellen."));
     // Auf die drei nächsten Stellen zoomen
     const near = state.visible.map((it) => ({ it, d: haversine(ll, L.latLng(it.lat, it.lon)) })).sort((a, b) => a.d - b.d).slice(0, 3);
     const b = L.latLngBounds([ll]); near.forEach(({ it }) => b.extend([it.lat, it.lon]));
@@ -727,10 +761,8 @@ function locate() {
     document.querySelectorAll(".tab").forEach((x) => x.setAttribute("aria-selected", String(x.id === "tab-list")));
     renderList();
     if (isMobile()) { if (sheetState === "peek") setSheet("half"); scrollToList(); }
-  }, (err) => {
-    btn.setAttribute("aria-busy", "false");
-    toast(err.code === 1 ? "Standortzugriff verweigert. Du kannst oben einen Ort suchen." : "Standort konnte nicht bestimmt werden. Suche stattdessen einen Ort.");
-  }, { enableHighAccuracy: true, timeout: 12000, maximumAge: 60000 });
+  } catch (err) { toast(geoError(err)); }
+  finally { btn.setAttribute("aria-busy", "false"); }
 }
 
 /* ---------------- Suche ---------------- */
@@ -760,33 +792,34 @@ function markActive(btns) { btns.forEach((b, i) => b.setAttribute("aria-selected
 function hideResults() { results.hidden = true; sbox.setAttribute("aria-expanded", "false"); activeIdx = -1; }
 function showResults(html) { results.innerHTML = html; results.hidden = false; sbox.setAttribute("aria-expanded", "true"); activeIdx = -1; }
 
+const KIND = { city: "Stadt", town: "Stadt", village: "Ortschaft", suburb: "Stadtteil", quarter: "Viertel" };
 async function runSearch(v, pickFirst) {
   const nv = norm(v);
   const local = state.items.filter((it) => it.name && it.search.includes(nv)).slice(0, 3);
-  const localPlaces = (state.places || []).filter((p) => p.n.startsWith(nv) || (nv.length >= 3 && p.n.includes(nv)))
+  const localPlaces = state.places.filter((p) => p.n.startsWith(nv) || p.n2.startsWith(nv) || (nv.length >= 3 && (p.n.includes(nv) || p.n2.includes(nv))))
     .sort((a, b) => a.rank - b.rank || b.pop - a.pop).slice(0, 4)
-    .map((p) => ({ title: p.name, sub: ({ city: "Stadt", town: "Stadt", village: "Ortschaft", suburb: "Stadtteil", quarter: "Viertel" }[p.kind]) + (p.parent ? ` von ${p.parent}` : "") + `, ${countNear(p)} Wasserstellen in der Nähe`, lat: p.lat, lon: p.lon, label: p.name, local: true }));
+    .map((p) => ({ title: p.name, sub: (p.parent ? t("{kind} von {parent}", { kind: t(KIND[p.kind]), parent: p.parent }) : t(KIND[p.kind])) + ", " + t("{n} Wasserstellen in der Nähe", { n: countNear(p) }), lat: p.lat, lon: p.lon, label: p.name, local: true }));
   let places = [...localPlaces];
   if (searchCtrl) searchCtrl.abort();
   searchCtrl = new AbortController();
   const html = () => {
     resultItems = [...local.map((it) => ({ kind: "item", it })), ...places.map((p) => ({ kind: "place", p }))];
     let h = "";
-    if (local.length) h += `<h3>Wasserstellen</h3>` + local.map((it, i) => `<button type="button" role="option" data-i="${i}">${dropSVG(it.cat, 18)}<span><span class="r-title">${esc(it.name)}</span><br><span class="r-sub">${esc(it.sub)}</span></span></button>`).join("");
-    if (places.length) h += `<h3>Orte</h3>` + places.map((p, j) => `<button type="button" role="option" data-i="${local.length + j}"><svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true" style="flex:0 0 auto;margin-top:2px"><path d="M12 2a7 7 0 0 0-7 7c0 5 7 13 7 13s7-8 7-13a7 7 0 0 0-7-7z" fill="#13304D"/><circle cx="12" cy="9" r="2.6" fill="#fff"/></svg><span><span class="r-title">${esc(p.title)}</span><br><span class="r-sub">${esc(p.sub)}</span></span></button>`).join("");
-    if (!h) h = `<p class="r-empty">Nichts gefunden zu „${esc(v)}“. Versuche einen Ortsnamen wie „Esch“ oder „Clervaux“.</p>`;
+    if (local.length) h += `<h3>${esc(t("Wasserstellen"))}</h3>` + local.map((it, i) => `<button type="button" role="option" data-i="${i}">${dropSVG(it.cat, 18)}<span><span class="r-title">${esc(it.name)}</span><br><span class="r-sub">${esc([it.locality, it.sub].filter(Boolean).join(", "))}</span></span></button>`).join("");
+    if (places.length) h += `<h3>${esc(t("Orte"))}</h3>` + places.map((p, j) => `<button type="button" role="option" data-i="${local.length + j}"><svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true" style="flex:0 0 auto;margin-top:2px"><path d="M12 2a7 7 0 0 0-7 7c0 5 7 13 7 13s7-8 7-13a7 7 0 0 0-7-7z" fill="currentColor"/><circle cx="12" cy="9" r="2.6" fill="var(--white)"/></svg><span><span class="r-title">${esc(p.title)}</span><br><span class="r-sub">${esc(p.sub)}</span></span></button>`).join("");
+    if (!h) h = `<p class="r-empty">${esc(t("Nichts gefunden zu „{q}“. Versuche einen Ortsnamen wie „Esch“ oder „Clervaux“.", { q: v }))}</p>`;
     showResults(h);
   };
-  if (local.length) html();
+  if (local.length || localPlaces.length) html();
   try {
-    const url = `${PHOTON}/api/?q=${encodeURIComponent(v)}&limit=6&lang=de&bbox=5.70,49.42,6.56,50.20`;
+    const url = `${PHOTON}/api/?q=${encodeURIComponent(v)}&limit=6&lang=${PHOTON_LANG[LANG]}&bbox=5.70,49.42,6.56,50.20`;
     const r = await fetch(url, { signal: searchCtrl.signal });
     const j = await r.json();
     const seenNames = new Set(localPlaces.map((p) => norm(p.title)));
     places = localPlaces.concat((j.features || []).filter((f) => !f.properties.countrycode || f.properties.countrycode === "LU").map((f) => {
       const p = f.properties;
       const title = p.name || [p.street, p.housenumber].filter(Boolean).join(" ");
-      const sub = [p.name && p.street ? [p.street, p.housenumber].filter(Boolean).join(" ") : "", [p.postcode, p.city || (p.name !== p.locality ? p.locality : "") || p.county].filter(Boolean).join(" "), p.name === p.city ? "Ortschaft" : ""].filter(Boolean).join(", ") || "Luxemburg";
+      const sub = [p.name && p.street ? [p.street, p.housenumber].filter(Boolean).join(" ") : "", [p.postcode, p.city || (p.name !== p.locality ? p.locality : "") || p.county].filter(Boolean).join(" ")].filter(Boolean).join(", ") || t("Luxemburg");
       return { title, sub, lat: f.geometry.coordinates[1], lon: f.geometry.coordinates[0], extent: p.extent, label: p.name || title };
     }).filter((p) => !seenNames.has(norm(p.title)))).slice(0, 7);
   } catch (e) { if (e.name === "AbortError") return; }
@@ -849,7 +882,7 @@ function setSheet(s) {
     const hgt = Math.max(120, Math.min(window.innerHeight - 70, startH + dy));
     document.documentElement.style.setProperty("--sheet-h", hgt + "px");
   });
-  const end = (e) => {
+  const end = () => {
     if (!dragging) return; dragging = false; sheet.classList.remove("dragging");
     if (!moved) { setSheet(sheetState === "peek" ? "half" : sheetState === "half" ? "full" : "peek"); return; }
     const hgt = sheet.getBoundingClientRect().height, vh = window.innerHeight;
@@ -866,7 +899,6 @@ let nearDone = false;
 function afterData() {
   $("#veil").hidden = true;
   applyFilters();
-  drawLabels();
   if (typeof onDataReady === "function") onDataReady();
   if (!nearDone && new URLSearchParams(location.search).get("near") === "1") { nearDone = true; locate(); }
   const m = /^#([nwr]\d+)$/.exec(location.hash);
@@ -876,13 +908,14 @@ window.addEventListener("hashchange", () => {
   const m = /^#([nwr]\d+)$/.exec(location.hash);
   if (m && state.byId.has(m[1]) && state.sel !== m[1]) select(m[1], { from: "hash" });
 });
+
 /* ---------------- Als App installieren ---------------- */
 const standalone = window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true;
 const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
 let installEvt = null;
 function showInstall(on) { $("#install").hidden = !on || standalone || store.get(INSTALL_KEY, false); }
 window.addEventListener("beforeinstallprompt", (e) => { e.preventDefault(); installEvt = e; showInstall(true); });
-window.addEventListener("appinstalled", () => { installEvt = null; showInstall(false); toast("Aqua Map ist installiert"); });
+window.addEventListener("appinstalled", () => { installEvt = null; showInstall(false); toast(t("Aqua Map ist installiert")); });
 $("#installbtn").addEventListener("click", async () => {
   if (installEvt) {
     installEvt.prompt();
@@ -902,6 +935,7 @@ if ("serviceWorker" in navigator && /^https?:$/.test(location.protocol)) {
 }
 
 function coreInit() {
+  applyI18n();
   setSheet("peek");
   map.fitBounds(LU_BOUNDS, { ...sidePad(), animate: false });
   updateAddLink();

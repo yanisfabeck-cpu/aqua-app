@@ -6,29 +6,44 @@
 <title>Aqua Map – Gratis Trinkwasser in Luxemburg</title>
 <meta name="description" content="Alle kostenlosen Trinkbrunnen, Wasserspender und Refill-Stationen in Luxemburg auf einer Karte.">
 <meta name="theme-color" content="#13304D">
+<meta name="color-scheme" content="light dark">
 <meta name="application-name" content="Aqua Map">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Aqua Map">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="format-detection" content="telephone=no">
+<script>
+  // Design vor dem ersten Zeichnen setzen, damit der dunkle Modus nicht aufblitzt
+  (function () {
+    var s = "system"; try { s = JSON.parse(localStorage.getItem("aqua-theme") || '"system"'); } catch (e) {}
+    var d = s === "dark" || (s === "system" && window.matchMedia && matchMedia("(prefers-color-scheme: dark)").matches);
+    document.documentElement.setAttribute("data-theme", d ? "dark" : "light");
+  })();
+</script>
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible+Next:wght@400;600;800&display=swap" rel="stylesheet" crossorigin="anonymous">
-<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet" crossorigin="anonymous">
 <link rel="icon" href="icons/favicon.svg" type="image/svg+xml">
 <link rel="icon" href="icons/icon-192.png" sizes="192x192" type="image/png">
 <link rel="stylesheet" href="css/vendor.css">
 <link rel="stylesheet" href="css/app.css">
 </head>
 <body data-view="map">
-<div id="map" role="application" aria-label="Karte der Wasserstellen in Luxemburg"></div>
+<div id="map" role="application" aria-label="Karte der Wasserstellen in Luxemburg" data-i18n-aria="Karte der Wasserstellen in Luxemburg"></div>
 
 <div class="loading-veil" id="veil" aria-hidden="true">
   <svg class="drop" viewBox="0 0 24 32"><path d="M12 1.6C9.2 5.6 3 12.6 3 19.6a9 9 0 0 0 18 0c0-7-6.2-14-9-18z" fill="#00A3E0" stroke="#fff" stroke-width="1.4"/></svg>
 </div>
+
+<div class="navbanner" id="navbanner" hidden role="status" aria-live="polite">
+  <svg width="28" height="28" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2 4.5 20.5 12 16.6l7.5 3.9z" fill="currentColor"/></svg>
+  <div class="nb-main"><p class="nb-text" id="nbtext"></p><p class="nb-left" id="nbleft"></p></div>
+  <button type="button" class="nb-stop" id="nbstop" data-i18n="Beenden">Beenden</button>
+</div>
+<div class="drinkbanner" id="drinkbanner" hidden role="alert"></div>
 
 <div class="side">
   <header id="topbar">
@@ -36,65 +51,65 @@
       <svg width="30" height="40" viewBox="0 0 24 32" aria-hidden="true"><path d="M12 1.6C9.2 5.6 3 12.6 3 19.6a9 9 0 0 0 18 0c0-7-6.2-14-9-18z" fill="#00A3E0"/><path d="M7.6 20.2a4.6 4.6 0 0 0 4.4 4.3" stroke="#fff" stroke-width="1.8" fill="none" stroke-linecap="round"/></svg>
       <div>
         <h1 class="brand-name">Aqua Map</h1>
-        <p class="brand-sub">Gratis Trinkwasser in ganz Luxemburg</p>
+        <p class="brand-sub" data-i18n="Gratis Trinkwasser in ganz Luxemburg">Gratis Trinkwasser in ganz Luxemburg</p>
       </div>
     </div>
     <div class="search-row">
       <div class="search" role="combobox" aria-expanded="false" aria-owns="results" aria-haspopup="listbox" id="searchbox">
         <svg class="ico" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5" stroke="currentColor" stroke-width="2.2" fill="none"/><path d="M15.5 15.5 21 21" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
-        <label class="sr-only" for="q">Ort, Adresse oder Wasserstelle suchen</label>
-        <input id="q" type="search" autocomplete="off" spellcheck="false" placeholder="Ort oder Adresse suchen" aria-autocomplete="list" aria-controls="results">
-        <button class="clear" id="qclear" type="button" aria-label="Suche leeren" hidden><svg width="16" height="16" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg></button>
+        <label class="sr-only" for="q" data-i18n="Ort, Adresse oder Wasserstelle suchen">Ort, Adresse oder Wasserstelle suchen</label>
+        <input id="q" type="search" autocomplete="off" spellcheck="false" placeholder="Ort oder Adresse suchen" data-i18n-ph="Ort oder Adresse suchen" aria-autocomplete="list" aria-controls="results">
+        <button class="clear" id="qclear" type="button" aria-label="Suche leeren" data-i18n-aria="Suche leeren" hidden><svg width="16" height="16" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg></button>
         <div class="results" id="results" role="listbox" hidden></div>
       </div>
-      <button class="btn-locate" id="locate" type="button" aria-label="Wasserstellen in meiner Nähe">
+      <button class="btn-locate" id="locate" type="button" aria-label="Wasserstellen in meiner Nähe" data-i18n-aria="Wasserstellen in meiner Nähe">
         <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4" fill="currentColor"/><circle cx="12" cy="12" r="8" stroke="currentColor" stroke-width="2" fill="none"/><path d="M12 1.5v3M12 19.5v3M1.5 12h3M19.5 12h3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
-        <span class="lbl">In meiner Nähe</span>
+        <span class="lbl" data-i18n="In meiner Nähe">In meiner Nähe</span>
       </button>
       <div class="install" id="install" hidden>
         <button class="btn-install" id="installbtn" type="button">
           <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12M7 10l5 5 5-5" stroke="currentColor" stroke-width="2.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 17v2.5A1.5 1.5 0 0 0 5.5 21h13a1.5 1.5 0 0 0 1.5-1.5V17" stroke="currentColor" stroke-width="2.2" fill="none" stroke-linecap="round"/></svg>
-          App installieren
+          <span data-i18n="App installieren">App installieren</span>
         </button>
-        <button class="install-x" id="installx" type="button" aria-label="Installieren ausblenden"><svg width="14" height="14" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg></button>
+        <button class="install-x" id="installx" type="button" aria-label="Installieren ausblenden" data-i18n-aria="Installieren ausblenden"><svg width="14" height="14" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg></button>
       </div>
     </div>
   </header>
 
-  <section id="sheet" aria-label="Wasserstellen">
-    <button class="handle" id="handle" type="button" aria-label="Liste vergrößern oder verkleinern"><span></span></button>
+  <section id="sheet" aria-label="Wasserstellen" data-i18n-aria="Wasserstellen">
+    <button class="handle" id="handle" type="button" aria-label="Liste vergrößern oder verkleinern" data-i18n-aria="Liste vergrößern oder verkleinern"><span></span></button>
     <div class="sheet-scroll" id="scroll">
       <div class="status">
         <div class="status-text" aria-live="polite">
-          <p class="count" id="count">Wasserstellen werden geladen …</p>
-          <p class="stamp" id="stamp">Daten kommen live aus OpenStreetMap.</p>
+          <p class="count" id="count" data-i18n="Wasserstellen werden geladen …">Wasserstellen werden geladen …</p>
+          <p class="stamp" id="stamp" data-i18n="Daten kommen live aus OpenStreetMap.">Daten kommen live aus OpenStreetMap.</p>
         </div>
-        <button class="icon-btn" id="reload" type="button" aria-label="Daten neu laden" title="Daten neu laden">
+        <button class="icon-btn" id="reload" type="button" aria-label="Daten neu laden" title="Daten neu laden" data-i18n-aria="Daten neu laden" data-i18n-title="Daten neu laden">
           <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.6-5.9" stroke="currentColor" stroke-width="2.2" fill="none" stroke-linecap="round"/><path d="M20 4v5h-5" stroke="currentColor" stroke-width="2.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
         </button>
       </div>
 
       <div class="notice error" id="err" hidden role="alert"></div>
 
-      <div class="chips" id="chips" role="group" aria-label="Arten von Wasserstellen"></div>
+      <div class="chips" id="chips" role="group" aria-label="Arten von Wasserstellen" data-i18n-aria="Arten von Wasserstellen"></div>
       <div class="notice" id="winter" hidden>
-        <p>Winterpause: Viele Trinkbrunnen im Freien sind etwa von November bis März abgestellt. Drinnen und in Refill-Stationen gibt es weiter Wasser.</p>
-        <button type="button" id="winterx" aria-label="Hinweis schließen"><svg width="16" height="16" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg></button>
+        <p data-i18n="Winterpause: Viele Trinkbrunnen im Freien sind etwa von November bis März abgestellt. Drinnen und in Refill-Stationen gibt es weiter Wasser.">Winterpause: Viele Trinkbrunnen im Freien sind etwa von November bis März abgestellt. Drinnen und in Refill-Stationen gibt es weiter Wasser.</p>
+        <button type="button" id="winterx" aria-label="Hinweis schließen" data-i18n-aria="Hinweis schließen"><svg width="16" height="16" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg></button>
       </div>
 
       <details class="more">
-        <summary><svg width="12" height="12" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 4l8 8-8 8" stroke="currentColor" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>Weitere Filter</summary>
+        <summary><svg width="12" height="12" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 4l8 8-8 8" stroke="currentColor" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg><span data-i18n="Weitere Filter">Weitere Filter</span></summary>
         <div class="checks">
-          <label><input type="checkbox" id="f-bottle"> Flasche lässt sich gut befüllen</label>
-          <label><input type="checkbox" id="f-wheel"> Rollstuhlgerecht</label>
-          <label><input type="checkbox" id="f-winter"> Drinnen oder ganzjährig geöffnet</label>
-          <label><input type="checkbox" id="f-broken" checked> Als defekt gemeldete ausblenden</label>
+          <label><input type="checkbox" id="f-bottle"> <span data-i18n="Flasche lässt sich gut befüllen">Flasche lässt sich gut befüllen</span></label>
+          <label><input type="checkbox" id="f-wheel"> <span data-i18n="Rollstuhlgerecht">Rollstuhlgerecht</span></label>
+          <label><input type="checkbox" id="f-winter"> <span data-i18n="Drinnen oder ganzjährig geöffnet">Drinnen oder ganzjährig geöffnet</span></label>
+          <label><input type="checkbox" id="f-broken" checked> <span data-i18n="Als defekt gemeldete ausblenden">Als defekt gemeldete ausblenden</span></label>
         </div>
       </details>
 
       <div class="tabs" role="tablist">
-        <button class="tab" role="tab" id="tab-list" aria-selected="true" aria-controls="view-list">In der Nähe</button>
-        <button class="tab" role="tab" id="tab-fav" aria-selected="false" aria-controls="view-list">Gemerkt</button>
+        <button class="tab" role="tab" id="tab-list" aria-selected="true" aria-controls="view-list" data-i18n="In der Nähe">In der Nähe</button>
+        <button class="tab" role="tab" id="tab-fav" aria-selected="false" aria-controls="view-list" data-i18n="Gemerkt">Gemerkt</button>
       </div>
 
       <div id="view-list">
@@ -104,34 +119,44 @@
       <div id="view-detail" hidden></div>
 
       <footer class="sheet-foot">
-        <p>Wasserstelle fehlt? <button type="button" class="linkbtn" data-go="add">Jetzt eintragen</button></p>
-        <p>Daten: <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap-Mitwirkende</a> (ODbL). Ortssuche: Photon von Komoot. Angaben ohne Gewähr.</p>
+        <p><span data-i18n="Wasserstelle fehlt?">Wasserstelle fehlt?</span> <button type="button" class="linkbtn" data-go="add" data-i18n="Jetzt eintragen">Jetzt eintragen</button></p>
+        <p><span data-i18n="Daten:">Daten:</span> <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener" data-i18n="OpenStreetMap-Mitwirkende">OpenStreetMap-Mitwirkende</a> (ODbL). <span data-i18n="Karte: OpenFreeMap. Ortssuche: Photon. Routen: Valhalla. Angaben ohne Gewähr.">Karte: OpenFreeMap. Ortssuche: Photon. Routen: Valhalla. Angaben ohne Gewähr.</span></p>
       </footer>
     </div>
   </section>
 
+  <section class="page" id="page-today" aria-labelledby="today-t">
+    <div class="page-head"><h2 id="today-t" data-i18n="Heute">Heute</h2><p data-i18n="Deine Schritte, dein Wasser und deine Rätsel.">Deine Schritte, dein Wasser und deine Rätsel.</p></div>
+    <div class="page-body" id="today-body"></div>
+  </section>
+
   <section class="page" id="page-games" aria-labelledby="games-t">
-    <div class="page-head"><h2 id="games-t">Rätsel</h2><p>Löse Rätsel rund ums Wasser und sammle Punkte.</p></div>
+    <div class="page-head"><h2 id="games-t" data-i18n="Rätsel">Rätsel</h2><p data-i18n="Löse Rätsel rund ums Wasser und sammle Punkte.">Löse Rätsel rund ums Wasser und sammle Punkte.</p></div>
     <div class="page-body" id="games-body"></div>
   </section>
 
   <section class="page" id="page-scan" aria-labelledby="scan-t">
-    <div class="page-head"><h2 id="scan-t">QR-Code scannen</h2><p>Scanne den Code an einer Wasserstelle und sammle Punkte. Andere QR-Codes kannst du auch lesen.</p></div>
+    <div class="page-head"><h2 id="scan-t" data-i18n="QR-Code scannen">QR-Code scannen</h2><p data-i18n="Scanne den Code an einer Wasserstelle und sammle Punkte. Andere QR-Codes kannst du auch lesen.">Scanne den Code an einer Wasserstelle und sammle Punkte. Andere QR-Codes kannst du auch lesen.</p></div>
     <div class="page-body">
       <div class="scanner" id="scanner">
         <video id="scanvideo" playsinline muted></video>
         <div class="finder" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
-        <p class="scan-msg" id="scanmsg">Kamera wird gestartet …</p>
+        <p class="scan-msg" id="scanmsg" data-i18n="Kamera wird gestartet …">Kamera wird gestartet …</p>
       </div>
       <div class="scan-result" id="scanresult" hidden aria-live="polite"></div>
       <div class="scan-tools">
         <label class="act file-act"><input type="file" id="scanfile" accept="image/*" class="sr-only">
           <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="9" cy="10" r="1.8" fill="currentColor"/><path d="m4 17 5-4.5 4 3.5 3-2.5 4 3.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>
-          Foto mit QR-Code wählen</label>
-        <button type="button" class="act" id="scanrestart" hidden>Kamera neu starten</button>
+          <span data-i18n="Foto mit QR-Code wählen">Foto mit QR-Code wählen</span></label>
+        <button type="button" class="act" id="scanrestart" hidden data-i18n="Kamera neu starten">Kamera neu starten</button>
       </div>
-      <p class="fine">Tipp: Jede Wasserstelle in Aqua Map hat einen eigenen QR-Code. Du findest ihn in den Details unter „QR-Code“ und kannst ihn als Aufkleber ausdrucken.</p>
+      <p class="fine" data-i18n="Tipp: Jede Wasserstelle in Aqua Map hat einen eigenen QR-Code. Du findest ihn in den Details unter „QR-Code“ und kannst ihn als Aufkleber ausdrucken.">Tipp: Jede Wasserstelle in Aqua Map hat einen eigenen QR-Code. Du findest ihn in den Details unter „QR-Code“ und kannst ihn als Aufkleber ausdrucken.</p>
     </div>
+  </section>
+
+  <section class="page" id="page-ranking" aria-labelledby="ranking-t">
+    <div class="page-head"><h2 id="ranking-t" data-i18n="Rangliste">Rangliste</h2><p data-i18n="Wer sammelt die meisten Wasserpunkte?">Wer sammelt die meisten Wasserpunkte?</p></div>
+    <div class="page-body" id="ranking-body"></div>
   </section>
 
   <section class="page" id="page-add" aria-labelledby="add-t">
@@ -139,37 +164,45 @@
   </section>
 
   <section class="page" id="page-profile" aria-labelledby="profile-t">
-    <div class="page-head"><h2 id="profile-t">Profil</h2></div>
+    <div class="page-head head-row"><h2 id="profile-t" data-i18n="Profil">Profil</h2>
+      <button type="button" class="icon-btn gear" data-go="settings" aria-label="Einstellungen" title="Einstellungen" data-i18n-aria="Einstellungen" data-i18n-title="Einstellungen">
+        <svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path d="M10.3 2.8h3.4l.5 2.6c.6.2 1.2.6 1.7 1l2.5-.9 1.7 3-2 1.7a6.6 6.6 0 0 1 0 2l2 1.7-1.7 3-2.5-.9c-.5.4-1.1.8-1.7 1l-.5 2.6h-3.4l-.5-2.6c-.6-.2-1.2-.6-1.7-1l-2.5.9-1.7-3 2-1.7a6.6 6.6 0 0 1 0-2l-2-1.7 1.7-3 2.5.9c.5-.4 1.1-.8 1.7-1z" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"/><circle cx="12" cy="12" r="2.8" fill="none" stroke="currentColor" stroke-width="1.9"/></svg>
+      </button>
+    </div>
     <div class="page-body" id="profile-body"></div>
   </section>
 
-  <nav id="nav" aria-label="Hauptmenü">
-    <button type="button" data-go="map" aria-current="page"><svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 4 3.5 6v14L9 18l6 2 5.5-2V4L15 6z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M9 4v14M15 6v14" stroke="currentColor" stroke-width="2"/></svg><span>Karte</span></button>
-    <button type="button" data-go="games"><svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true"><path d="M9.5 9.2a2.6 2.6 0 1 1 3.6 2.4c-.7.3-1.1.9-1.1 1.6v.6" stroke="currentColor" stroke-width="2.1" fill="none" stroke-linecap="round"/><circle cx="12" cy="17.2" r="1.25" fill="currentColor"/><path d="M12 2.5C9.6 6 4.5 11.4 4.5 15.6a7.5 7.5 0 0 0 15 0C19.5 11.4 14.4 6 12 2.5z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg><span>Rätsel</span></button>
-    <button type="button" data-go="scan" class="nav-scan"><span class="bubble"><svg width="26" height="26" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8V5.5A1.5 1.5 0 0 1 5.5 4H8M16 4h2.5A1.5 1.5 0 0 1 20 5.5V8M20 16v2.5a1.5 1.5 0 0 1-1.5 1.5H16M8 20H5.5A1.5 1.5 0 0 1 4 18.5V16" stroke="currentColor" stroke-width="2.2" fill="none" stroke-linecap="round"/><rect x="8" y="8" width="3" height="3" fill="currentColor"/><rect x="13" y="8" width="3" height="3" fill="currentColor"/><rect x="8" y="13" width="3" height="3" fill="currentColor"/><path d="M13 13h3v3" stroke="currentColor" stroke-width="2" fill="none"/></svg></span><span>Scannen</span></button>
-    <button type="button" data-go="add"><svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.5C9.6 6 4.5 11.4 4.5 15.6a7.5 7.5 0 0 0 15 0C19.5 11.4 14.4 6 12 2.5z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M12 11.5v7M8.5 15h7" stroke="currentColor" stroke-width="2.1" stroke-linecap="round"/></svg><span>Eintragen</span></button>
-    <button type="button" data-go="profile"><span class="nav-avatar" id="navavatar"><svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8.5" r="4" fill="none" stroke="currentColor" stroke-width="2"/><path d="M4.5 20.5c.8-3.6 3.8-5.6 7.5-5.6s6.7 2 7.5 5.6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></span><span>Profil</span></button>
+  <section class="page" id="page-settings" aria-labelledby="settings-t">
+    <div class="page-head"><h2 id="settings-t" data-i18n="Einstellungen">Einstellungen</h2></div>
+    <div class="page-body" id="settings-body"></div>
+  </section>
+
+  <nav id="nav" aria-label="Hauptmenü" data-i18n-aria="Hauptmenü">
+    <button type="button" data-go="map" aria-current="page"><svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 4 3.5 6v14L9 18l6 2 5.5-2V4L15 6z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M9 4v14M15 6v14" stroke="currentColor" stroke-width="2"/></svg><span data-i18n="Karte">Karte</span></button>
+    <button type="button" data-go="today"><svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.5C9.6 6 4.5 11.4 4.5 15.6a7.5 7.5 0 0 0 15 0C19.5 11.4 14.4 6 12 2.5z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M7.6 15.4c1.5-1 3-1 4.4 0s2.9 1 4.4 0" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/></svg><span data-i18n="Heute">Heute</span></button>
+    <button type="button" data-go="scan" class="nav-scan"><span class="bubble"><svg width="26" height="26" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8V5.5A1.5 1.5 0 0 1 5.5 4H8M16 4h2.5A1.5 1.5 0 0 1 20 5.5V8M20 16v2.5a1.5 1.5 0 0 1-1.5 1.5H16M8 20H5.5A1.5 1.5 0 0 1 4 18.5V16" stroke="currentColor" stroke-width="2.2" fill="none" stroke-linecap="round"/><rect x="8" y="8" width="3" height="3" fill="currentColor"/><rect x="13" y="8" width="3" height="3" fill="currentColor"/><rect x="8" y="13" width="3" height="3" fill="currentColor"/><path d="M13 13h3v3" stroke="currentColor" stroke-width="2" fill="none"/></svg></span><span data-i18n="Scannen">Scannen</span></button>
+    <button type="button" data-go="ranking"><svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true"><path d="M3.5 20.5h17" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M9 20.5V9.5h6v11M3.5 20.5v-7h5.5M15 20.5v-5h5.5v5" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M12 2.8l.9 1.9 2 .3-1.5 1.4.4 2-1.8-1-1.8 1 .4-2L9.1 5l2-.3z" fill="currentColor"/></svg><span data-i18n="Rangliste">Rangliste</span></button>
+    <button type="button" data-go="profile"><span class="nav-avatar" id="navavatar"><svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8.5" r="4" fill="none" stroke="currentColor" stroke-width="2"/><path d="M4.5 20.5c.8-3.6 3.8-5.6 7.5-5.6s6.7 2 7.5 5.6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></span><span data-i18n="Profil">Profil</span></button>
   </nav>
 </div>
-<div class="pickpin" id="pickpin" hidden aria-hidden="true">
-  <svg width="40" height="54" viewBox="0 0 24 32"><path d="M12 1.6C9.2 5.6 3 12.6 3 19.6a9 9 0 0 0 18 0c0-7-6.2-14-9-18z" fill="#13304D" stroke="#fff" stroke-width="1.4"/><path d="M12 15v8M8 19h8" stroke="#fff" stroke-width="2" stroke-linecap="round"/></svg>
-  <span class="pickdot"></span>
-</div>
+<div class="pickpin" id="pickpin" hidden aria-hidden="true"></div>
 <div class="toast" id="toast" role="status" hidden></div>
 <div class="dialog-back" id="dlg" hidden><div class="dialog" role="dialog" aria-modal="true" id="dlgbox"></div></div>
 <div class="dialog-back" id="iosdlg" hidden>
   <div class="dialog" role="dialog" aria-modal="true" aria-labelledby="iosdlg-t">
-    <h2 id="iosdlg-t">Aqua Map installieren</h2>
-    <p>So legst du die App auf deinen Home-Bildschirm:</p>
+    <h2 id="iosdlg-t" data-i18n="Aqua Map installieren">Aqua Map installieren</h2>
+    <p data-i18n="So legst du die App auf deinen Home-Bildschirm:">So legst du die App auf deinen Home-Bildschirm:</p>
     <ol>
-      <li>Tippe in Safari auf <svg width="18" height="18" viewBox="0 0 24 24" aria-label="Teilen"><path d="M12 3v12M8 7l4-4 4 4" stroke="#006E9E" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/><path d="M8 10H6.5A1.5 1.5 0 0 0 5 11.5v8A1.5 1.5 0 0 0 6.5 21h11a1.5 1.5 0 0 0 1.5-1.5v-8a1.5 1.5 0 0 0-1.5-1.5H16" stroke="#006E9E" stroke-width="2" fill="none" stroke-linecap="round"/></svg> Teilen.</li>
-      <li>Wähle „Zum Home-Bildschirm“.</li>
-      <li>Tippe oben rechts auf „Hinzufügen“.</li>
+      <li><span data-i18n="Tippe in Safari auf">Tippe in Safari auf</span> <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12M8 7l4-4 4 4" stroke="#006E9E" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/><path d="M8 10H6.5A1.5 1.5 0 0 0 5 11.5v8A1.5 1.5 0 0 0 6.5 21h11a1.5 1.5 0 0 0 1.5-1.5v-8a1.5 1.5 0 0 0-1.5-1.5H16" stroke="#006E9E" stroke-width="2" fill="none" stroke-linecap="round"/></svg> <span data-i18n="Teilen.">Teilen.</span></li>
+      <li data-i18n="Wähle „Zum Home-Bildschirm“.">Wähle „Zum Home-Bildschirm“.</li>
+      <li data-i18n="Tippe oben rechts auf „Hinzufügen“.">Tippe oben rechts auf „Hinzufügen“.</li>
     </ol>
-    <button class="act primary" type="button" id="iosdlg-ok">Verstanden</button>
+    <button class="act primary" type="button" id="iosdlg-ok" data-i18n="Verstanden">Verstanden</button>
   </div>
 </div>
 
+<script src="js/i18n-dict.js"></script>
+<script src="js/i18n.js"></script>
 <script src="js/vendor/leaflet.js"></script>
 <script src="js/vendor/leaflet.markercluster.js"></script>
 <script src="js/vendor/maplibre-gl.js"></script>
@@ -178,6 +211,7 @@
 <script src="js/vendor/qrcode.min.js"></script>
 <script src="js/lu-border.js"></script>
 <script src="js/core.js"></script>
+<script src="js/route.js"></script>
 <script src="js/features.js"></script>
 </body>
 </html>

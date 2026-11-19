@@ -1,6 +1,6 @@
 /* Aqua Map – Service Worker
    Hält die App offline verfügbar und speichert angesehene Kartenkacheln. */
-const VERSION = "aqua-map-v4";
+const VERSION = "aqua-map-v5";
 const SHELL_CACHE = `${VERSION}-shell`;
 const TILE_CACHE = "aqua-map-tiles-v2";
 const FONT_CACHE = "aqua-map-fonts-v1";
@@ -16,8 +16,11 @@ const SHELL = [
   "./js/vendor/leaflet-maplibre-gl.js",
   "./js/vendor/jsqr.min.js",
   "./js/vendor/qrcode.min.js",
+  "./js/i18n-dict.js",
+  "./js/i18n.js",
   "./js/lu-border.js",
   "./js/core.js",
+  "./js/route.js",
   "./js/features.js",
   "./manifest.webmanifest",
   "./icons/favicon.svg",
@@ -121,4 +124,13 @@ self.addEventListener("fetch", (event) => {
     event.respondWith(cacheFirst(req, FONT_CACHE, false).catch(() => Response.error()));
   }
   // Alles andere (Ortssuche, Meldungen, Fotos) normal übers Netz
+});
+
+/* Tippen auf eine Trink-Erinnerung öffnet Aqua Map */
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  event.waitUntil(self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((list) => {
+    for (const c of list) if ("focus" in c) return c.focus();
+    return self.clients.openWindow("./");
+  }));
 });
