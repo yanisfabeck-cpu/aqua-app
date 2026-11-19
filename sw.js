@@ -1,6 +1,6 @@
 /* Aqua Map – Service Worker
    Hält die App offline verfügbar und speichert angesehene Kartenkacheln. */
-const VERSION = "aqua-map-v5";
+const VERSION = "aqua-map-v6";
 const SHELL_CACHE = `${VERSION}-shell`;
 const TILE_CACHE = "aqua-map-tiles-v2";
 const FONT_CACHE = "aqua-map-fonts-v1";
@@ -23,7 +23,9 @@ const SHELL = [
   "./js/route.js",
   "./js/features.js",
   "./manifest.webmanifest",
-  "./icons/favicon.svg",
+  "./icons/favicon-32.png",
+  "./icons/favicon-48.png",
+  "./icons/icon-maskable-192.png",
   "./icons/icon-192.png",
   "./icons/icon-512.png",
   "./icons/icon-maskable-512.png",
