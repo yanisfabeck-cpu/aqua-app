@@ -261,7 +261,7 @@ dl.facts dd{margin:0;font-weight:600;overflow-wrap:anywhere}
 
 /* ============ Ansichten ============ */
 .page{display:none}
-body[data-view="today"] #page-today,body[data-view="games"] #page-games,body[data-view="scan"] #page-scan,body[data-view="ranking"] #page-ranking,body[data-view="add"] #page-add,body[data-view="profile"] #page-profile,body[data-view="settings"] #page-settings{display:flex}
+body[data-view="today"] #page-today,body[data-view="games"] #page-games,body[data-view="scan"] #page-scan,body[data-view="ranking"] #page-ranking,body[data-view="add"] #page-add,body[data-view="profile"] #page-profile,body[data-view="settings"] #page-settings,body[data-view="admin"] #page-admin{display:flex}
 body:not([data-view="map"]) #topbar,body:not([data-view="map"]) #sheet{display:none}
 .page{flex-direction:column;flex:1 1 auto;min-height:0;overflow:auto;overscroll-behavior:contain;background:var(--white)}
 .page-head{padding:20px 18px 6px}
@@ -585,7 +585,7 @@ body:not([data-view="map"]) .add-fab{display:none}
 .avatars.dim span{opacity:.45}
 .avatar-lg,.photo-prev,.lb-av,#nav .nav-avatar{overflow:hidden}
 .avatar-lg img,.photo-prev img,.lb-av img,#nav .nav-avatar img{width:100%;height:100%;border-radius:50%;object-fit:cover;display:block}
-#nav .nav-avatar.photo{background:transparent}
+#nav .nav-avatar.has-photo{background:transparent}
 
 /* ============ Gewinnspiel ============ */
 :root{--prize-bg:#13304D;--prize-line:transparent}
@@ -638,3 +638,43 @@ body:not([data-view="map"]) .add-fab{display:none}
 .won-dlg .b-body{fill:var(--sky-wash)}
 .won-dlg .b-neck{fill:#9FD3EC}
 .won-dlg .b-shine{stroke:var(--white)}
+
+/* ============ Spitzname-Fehler ============ */
+.field-err{margin:-6px 0 12px;color:var(--danger);font-weight:600;font-size:14px}
+.field input[aria-invalid="true"]{border-color:var(--danger)}
+
+/* ============ Moderation ============ */
+.adm-card .card-t{display:flex;justify-content:space-between}
+.adm-photos,.adm-players,.adm-words{list-style:none;margin:0;padding:0;display:grid;gap:10px}
+.adm-photos li{display:flex;gap:14px;align-items:flex-start;background:var(--mist);border-radius:16px;padding:12px}
+.adm-photos img{width:112px;height:112px;border-radius:14px;object-fit:cover;flex:0 0 auto;background:var(--line)}
+.adm-pmain{flex:1 1 auto;min-width:0;display:flex;flex-direction:column;gap:4px}
+.adm-pmain .row2{margin:8px 0 0}
+.adm-players li{display:flex;align-items:center;gap:12px;padding:6px 0;border-bottom:1px solid var(--line)}
+.adm-pname{flex:1 1 auto;min-width:0;font-weight:700}
+.adm-pname small{display:block;font-weight:500;color:var(--ink-soft);font-size:13px}
+.adm-flag{display:inline-block;font-size:11.5px;font-weight:700;border-radius:999px;padding:1px 8px;background:var(--bad-bg);color:var(--bad-ink);vertical-align:2px}
+.adm-flag.ok{background:var(--good-bg);color:var(--good-ink)}
+.linkbtn.danger{color:var(--danger)}
+.adm-words li{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid var(--line)}
+.adm-code{letter-spacing:.06em;color:var(--sky-text)}
+
+/* ============ Farbige Menü-Symbole ============ */
+#nav button{--c:var(--ink-soft);--ct:var(--ink-soft)}
+#nav [data-go="map"]{--c:#0A8FD0;--ct:#0A6FA3}
+#nav [data-go="games"]{--c:#7C5CE0;--ct:#6243C9}
+#nav [data-go="today"]{--c:#10A897;--ct:#0B7F72}
+#nav [data-go="ranking"]{--c:#E39A00;--ct:#975F00}
+#nav [data-go="profile"]{--c:#E5507E;--ct:#BF3462}
+[data-theme="dark"] #nav [data-go="map"]{--c:#4FB8EC;--ct:#7CCBF2}
+[data-theme="dark"] #nav [data-go="games"]{--c:#A68CF5;--ct:#BBA6F7}
+[data-theme="dark"] #nav [data-go="today"]{--c:#38CDB8;--ct:#6ADBCB}
+[data-theme="dark"] #nav [data-go="ranking"]{--c:#F5B83A;--ct:#F7C863}
+[data-theme="dark"] #nav [data-go="profile"]{--c:#F57EA2;--ct:#F8A0BB}
+#nav button>svg{color:var(--c);padding:3px 13px;border-radius:999px;box-sizing:content-box;transition:background-color .15s}
+#nav .nav-avatar>svg{color:var(--c)}
+#nav button[aria-current="page"]{color:var(--ct)}
+#nav button[aria-current="page"]>svg{background:color-mix(in srgb,var(--c) 17%,transparent);transform:none}
+#nav button[aria-current="page"] .nav-avatar{box-shadow:0 0 0 2px var(--c);border-radius:50%}
+#nav button[aria-current="page"] .nav-avatar.emoji{box-shadow:0 0 0 2px var(--c)}
+#nav .nav-avatar{margin:2px 0}

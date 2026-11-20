@@ -20,6 +20,25 @@ const today = () => { const d = new Date(); return `${d.getFullYear()}-${String(
 const backBtnHTML = (label, id) => `<button type="button" class="back" id="${id}"><svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 4 7 12l8 8" stroke="currentColor" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>${esc(label)}</button>`;
 const SPLASH = `<span class="splash" aria-hidden="true"><svg width="56" height="56" viewBox="0 0 56 56"><circle cx="28" cy="28" r="26" fill="var(--sky-wash)"/><path d="m18 29 7 7 13-15" stroke="#00A3E0" stroke-width="4.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg><i></i><i></i></span>`;
 
+/* ---------------- Namensfilter ---------------- */
+// Gleiche Regeln wie public.name_allowed in der Datenbank: Buchstaben dürfen sich wiederholen,
+// 0/1/3/4/5/7/9/@/$ zählen als Buchstaben, Wörter mit „=“ sind nur als ganzes Wort gesperrt.
+const NAME_RULES = (typeof BLOCKED_WORDS !== "undefined" ? BLOCKED_WORDS : []).map((w) => {
+  const whole = w[0] === "="; const core = (whole ? w.slice(1) : w).split("").map((c) => c + "+").join("");
+  return { whole, re: new RegExp(whole ? `^${core}$` : core) };
+});
+const LEET = { "0": "o", "1": "i", "3": "e", "4": "a", "5": "s", "7": "t", "9": "g", "!": "i", "|": "i", "@": "a", "$": "s", "€": "e" };
+function nameAllowed(name) {
+  const raw = String(name || "").toLowerCase();
+  if (/1\W*4\W*8\W*8/.test(raw)) return false;
+  const base = raw.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/ß/g, "ss").replace(/ø/g, "o");
+  for (const v of [base.replace(/[0134579!|@$€]/g, (c) => LEET[c]), base.replace(/[0-9]/g, "")]) {
+    const toks = v.split(/[^a-z]+/).filter(Boolean), joined = toks.join("");
+    if (NAME_RULES.some(({ whole, re }) => (whole ? toks.some((tk) => re.test(tk)) : re.test(joined)))) return false;
+  }
+  return true;
+}
+
 /* ---------------- Profil ---------------- */
 const PROFILE_KEY = "aqua-profile-v1";
 const AVATARS = ["💧", "🐟", "🐳", "🦆", "🐸", "🌊", "🐬", "🦦"];
@@ -68,8 +87,8 @@ const isPhoto = (p) => typeof p === "string" && /^data:image\/(jpeg|png|webp);ba
 const avatarHTML = (photo, emoji) => isPhoto(photo) ? `<img src="${photo}" alt="" draggable="false">` : esc(emoji || "💧");
 function renderNavAvatar() {
   const el = $("#navavatar");
-  if (profile.name) { el.innerHTML = avatarHTML(profile.photo, profile.avatar); el.classList.add("emoji"); el.classList.toggle("photo", isPhoto(profile.photo)); }
-  else { el.innerHTML = navIconHTML; el.classList.remove("emoji", "photo"); }
+  if (profile.name) { el.innerHTML = avatarHTML(profile.photo, profile.avatar); el.classList.add("emoji"); el.classList.toggle("has-photo", isPhoto(profile.photo)); }
+  else { el.innerHTML = navIconHTML; el.classList.remove("emoji", "has-photo"); }
 }
 // Foto aus der Galerie oder Kamera: quadratisch zuschneiden und klein speichern (128 px, JPEG)
 async function photoFromFile(file) {
@@ -98,7 +117,8 @@ const BADGE_ICON = (on) => `<svg width="34" height="34" viewBox="0 0 34 34" aria
 function profileForm(editing) {
   return `<form id="profform" class="form">
     ${editing ? "" : `<p class="lead">${esc(t("Mit einem Profil sammelst du Punkte für Rätsel, Schritte, besuchte Brunnen und Meldungen, schaltest Abzeichen frei und kannst in der Rangliste mitmachen."))}</p>`}
-    <label class="field"><span>${esc(t("Dein Spitzname"))}</span><input id="pname" maxlength="24" required autocomplete="nickname" value="${esc(profile.name)}" placeholder="${esc(t("z. B. Brunnenfuchs"))}"></label>
+    <label class="field"><span>${esc(t("Dein Spitzname"))}</span><input id="pname" maxlength="24" required autocomplete="nickname" value="${esc(profile.name)}" placeholder="${esc(t("z. B. Brunnenfuchs"))}" aria-describedby="pname-err"></label>
+    <p class="field-err" id="pname-err" role="alert" hidden></p>
     <fieldset class="field"><legend>${esc(t("Profilbild"))}</legend>
       <div class="photo-row">
         <span class="photo-prev" id="photoprev" aria-hidden="true">${avatarHTML(profile.photo, profile.avatar)}</span>
@@ -109,7 +129,7 @@ function profileForm(editing) {
       </div>
       <p class="fine" id="photonote">${esc(t("Oder wähle ein Bild:"))}</p>
       <div class="avatars${isPhoto(profile.photo) ? " dim" : ""}" id="avgrid">${AVATARS.map((a) => `<label><input type="radio" name="pav" value="${a}" ${a === profile.avatar ? "checked" : ""}><span>${a}</span></label>`).join("")}</div>
-      <p class="fine">${esc(t("Wenn du bei der Rangliste mitmachst, sehen andere dein Bild. Nimm kein Foto, das du nicht öffentlich zeigen willst."))}</p>
+      <p class="fine">${esc(t("Eigene Fotos prüft das Aqua-Map-Team, bevor andere sie in der Rangliste sehen. Beleidigende oder unpassende Fotos werden abgelehnt."))}</p>
     </fieldset>
     ${!editing && profile.points ? `<p class="fine">${esc(t("Deine bisherigen {n} Punkte werden übernommen.", { n: profile.points }))}</p>` : ""}
     <div class="row2">${editing ? `<button class="act" type="button" id="profcancel">${esc(t("Abbrechen"))}</button>` : ""}<button class="act primary" type="submit">${esc(editing ? t("Speichern") : t("Profil erstellen"))}</button></div>
@@ -137,6 +157,13 @@ function bindProfileForm(editing) {
     e.preventDefault();
     const name = $("#pname").value.trim();
     if (!name) { $("#pname").focus(); return; }
+    const nerr = $("#pname-err");
+    if (!nameAllowed(name)) {
+      nerr.textContent = t("Dieser Spitzname ist nicht erlaubt. Bitte wähle einen anderen."); nerr.hidden = false;
+      $("#pname").setAttribute("aria-invalid", "true"); $("#pname").focus(); return;
+    }
+    nerr.hidden = true; $("#pname").removeAttribute("aria-invalid");
+    if (name !== profile.name) profile.nameRejected = false;
     const av = document.querySelector('input[name="pav"]:checked');
     const isNew = !profile.name;
     if ((photo || null) !== (profile.photo || null)) { profile.photo = photo; profile.photoVer = (profile.photoVer || 0) + 1; }
@@ -1020,7 +1047,7 @@ async function lbCall(path, opts = {}) {
   // Publishable Keys gehören nur in den apikey-Header (sie sind kein JWT)
   const auth = LB.key.startsWith("eyJ") ? { Authorization: `Bearer ${LB.key}` } : {};
   const res = await fetch(`${LB.url}/rest/v1/${path}`, { ...opts, headers: { apikey: LB.key, ...auth, "Content-Type": "application/json", ...(opts.headers || {}) } });
-  if (!res.ok) throw new Error("HTTP " + res.status);
+  if (!res.ok) { let m = ""; try { m = (await res.json()).message || ""; } catch (e) { /* kein JSON */ } throw new Error(m || "HTTP " + res.status); }
   return res;
 }
 const rpc = (fn, body) => lbCall("rpc/" + fn, { method: "POST", body: JSON.stringify(body || {}) });
@@ -1034,8 +1061,15 @@ async function lbSync() {
   // Das Foto nur schicken, wenn es sich geändert hat
   const photoChanged = store.get(LB_PHOTO_KEY, -1) !== (profile.photoVer || 0);
   if (photoChanged) body.p_photo = isPhoto(profile.photo) ? profile.photo : "";
-  try { await rpc("upsert_score", body); if (photoChanged) store.set(LB_PHOTO_KEY, profile.photoVer || 0); }
-  catch (e) { /* später erneut */ }
+  try {
+    await rpc("upsert_score", body);
+    if (photoChanged) { store.set(LB_PHOTO_KEY, profile.photoVer || 0); if (isPhoto(profile.photo)) profile.photoState = "pending"; }
+    if (profile.nameRejected || profile.lbBanned) { profile.nameRejected = false; profile.lbBanned = false; store.set(PROFILE_KEY, profile); }
+  } catch (e) {
+    // Name gesperrt oder Gerät ausgeschlossen: merken und in der Rangliste anzeigen
+    if (e.message === "name_not_allowed" && !profile.nameRejected) { profile.nameRejected = true; store.set(PROFILE_KEY, profile); }
+    if (e.message === "banned" && !profile.lbBanned) { profile.lbBanned = true; store.set(PROFILE_KEY, profile); }
+  }
 }
 async function lbRemove() {
   store.set(LB_PHOTO_KEY, -1);
@@ -1086,7 +1120,7 @@ function rulesHTML(c) {
     <li>${esc(t("Wer am {date} um 23:59 Uhr auf Platz 1 liegt, gewinnt eine Trinkflasche. Bei Gleichstand gewinnt, wer die Punktzahl zuerst erreicht hat.", { date: dayMonth(new Date(c.ends_at)) }))}</li>
     <li>${esc(t("Der Gewinner sieht die Nachricht in der App. Wer einen Kontakt angegeben hat, wird zusätzlich benachrichtigt."))}</li>
     <li>${esc(t("Kontaktangaben nutzen wir nur, um den Gewinner zu benachrichtigen. Nach dem Gewinnspiel löschen wir alle anderen."))}</li>
-    <li>${esc(t("Wer schummelt, wird ausgeschlossen."))}</li></ol></details>`;
+    <li>${esc(t("Wer schummelt oder beleidigende Namen oder Fotos benutzt, wird ausgeschlossen."))}</li></ol></details>`;
 }
 function prizeHTML(c, me) {
   if (!c) return "";
@@ -1207,12 +1241,32 @@ async function renderRanking() {
   b.innerHTML = `${prize}${meBox(0, profile.points)}<p class="fine">${esc(t("Rangliste wird geladen …"))}</p>`;
   try {
     await lbSync();
+    if (view !== "ranking") return;
+    if (profile.lbBanned) {
+      b.innerHTML = `${prize}${meBox(0, profile.points)}<p class="hint warn">${esc(t("Du bist von der Rangliste ausgeschlossen."))}</p>${howPoints()}`;
+      return;
+    }
+    if (profile.nameRejected) {
+      b.innerHTML = `${prize}${meBox(0, profile.points)}<p class="hint warn">${esc(t("Dein Spitzname ist in der Rangliste nicht erlaubt. Bitte ändere ihn in deinem Profil."))}</p>
+        <button type="button" class="act primary wide" id="lbrename">${esc(t("Spitzname ändern"))}</button>${howPoints()}`;
+      $("#lbrename").onclick = () => { go("profile"); $("#profedit").click(); };
+      return;
+    }
     const key = c ? "round_points" : "points", tie = c ? "round_updated_at" : "updated_at";
     const [rowsRes, meRes] = await Promise.all([
       lbCall(`leaderboard_public?select=id,name,avatar,photo,${key}&order=${key}.desc,${tie}.asc&limit=50`),
-      lbCall(`leaderboard_public?select=${key}&id=eq.${encodeURIComponent(lbIdent.id)}`)
+      lbCall(`leaderboard_public?select=${key},photo_status&id=eq.${encodeURIComponent(lbIdent.id)}`)
     ]);
-    const rows = await rowsRes.json(), mine = ((await meRes.json())[0] || {})[key] || 0;
+    const rows = await rowsRes.json(), meRow = (await meRes.json())[0] || {}, mine = meRow[key] || 0;
+    // eigenes Foto immer aus dem Gerät zeigen, auch solange es geprüft wird
+    rows.forEach((x) => { if (x.id === lbIdent.id) x.photo = isPhoto(profile.photo) ? profile.photo : x.photo; });
+    const photoPending = isPhoto(profile.photo) && meRow.photo_status === "pending";
+    if (meRow.photo_status === "ok" && profile.photoState !== "ok") { profile.photoState = "ok"; store.set(PROFILE_KEY, profile); }
+    if (isPhoto(profile.photo) && meRow.photo_status === null && meRow[key] !== undefined && store.get(LB_PHOTO_KEY, -1) === (profile.photoVer || 0)) {
+      // Foto wurde abgelehnt: auf diesem Gerät entfernen
+      profile.photo = null; profile.photoVer = (profile.photoVer || 0) + 1; store.set(LB_PHOTO_KEY, profile.photoVer); profile.photoState = null;
+      store.set(PROFILE_KEY, profile); renderNavAvatar(); toast(t("Dein Foto wurde nicht freigegeben. Du kannst ein anderes wählen."));
+    }
     let myRank = rows.findIndex((x) => x.id === lbIdent.id) + 1;
     if (!myRank) {
       const cr = await lbCall(`leaderboard_public?select=id&${key}=gt.${mine}&limit=1`, { headers: { Prefer: "count=exact" } });
@@ -1226,6 +1280,7 @@ async function renderRanking() {
     const rest = rows.filter((x, i) => i >= 3 || (x[key] || 0) <= 0);
     b.innerHTML = `${prize}${meBox(myRank, c ? mine : profile.points, extra)}
       ${c && contestOpen(c) ? `<div class="lb-contact"><span>${esc(contactValid(c) ? t("Kontakt für den Gewinnfall: {c}", { c: profile.contactHint }) : t("Noch kein Kontakt für den Gewinnfall hinterlegt."))}</span><button type="button" class="linkbtn" data-contact>${esc(contactValid(c) ? t("Ändern") : t("Hinzufügen"))}</button></div>` : ""}
+      ${photoPending ? `<p class="hint">${esc(t("Dein Foto wird noch geprüft. Andere sehen es erst, wenn es freigegeben ist."))}</p>` : ""}
       ${podiumHTML(rows, key)}
       ${rest.length ? `<ol class="lb-list" start="${rows.length - rest.length + 1}">${rest.map((x) => `<li class="${x.id === lbIdent.id ? "me" : ""}"><span class="lb-rank">${rows.indexOf(x) + 1}</span><span class="lb-av">${avatarHTML(x.photo, x.avatar)}</span><span class="lb-name">${esc(x.name)}</span><span class="lb-pts">${num(x[key] || 0)}</span></li>`).join("")}</ol>` : ""}
       ${rows.length ? "" : `<p class="lead">${esc(t("Noch niemand dabei. Sei die oder der Erste!"))}</p>`}
@@ -1236,6 +1291,71 @@ async function renderRanking() {
     b.innerHTML = `${prize}${meBox(0, profile.points)}<p class="hint warn">${esc(t("Die Rangliste konnte nicht geladen werden. Prüfe deine Internetverbindung."))}</p><button type="button" class="act wide" id="lbreload">${esc(t("Erneut versuchen"))}</button>`;
     $("#lbreload").onclick = renderRanking;
   }
+}
+
+/* ---------------- Moderation (nur für das Aqua-Map-Team, Aufruf über …/#admin) ---------------- */
+// Diese Seite ist absichtlich nur auf Deutsch. Das Passwort wird nur für diese Sitzung im Browser gemerkt.
+const ADMIN_PW_KEY = "aqua-admin-pw";
+const adminPw = { get: () => { try { return sessionStorage.getItem(ADMIN_PW_KEY) || ""; } catch (e) { return ""; } }, set: (v) => { try { if (v) sessionStorage.setItem(ADMIN_PW_KEY, v); else sessionStorage.removeItem(ADMIN_PW_KEY); } catch (e) { /* egal */ } } };
+async function adminAction(action, id, text) {
+  try { await rpc("admin_action", { p_pw: adminPw.get(), p_action: action, p_id: id || null, p_text: text || null }); return true; }
+  catch (e) { toast(e.message === "word_too_short" ? "Das Wort ist zu kurz." : "Das hat nicht geklappt: " + e.message); return false; }
+}
+async function renderAdmin() {
+  const b = $("#admin-body");
+  if (!lbReady()) { b.innerHTML = `<p class="hint">Die Datenbank ist nicht eingerichtet.</p>`; return; }
+  if (!adminPw.get()) {
+    b.innerHTML = `<form id="admform" class="form"><p class="lead">Hier prüft ihr Fotos, sperrt Wörter für Spitznamen, schließt Spieler aus und seht den Gewinner mit Kontakt.</p>
+      <label class="field"><span>Passwort</span><input id="admpw" type="password" autocomplete="current-password" required></label>
+      <button class="act primary wide" type="submit">Anmelden</button></form>`;
+    $("#admform").onsubmit = (e) => { e.preventDefault(); adminPw.set($("#admpw").value.trim()); renderAdmin(); };
+    return;
+  }
+  b.innerHTML = `<p class="fine">Wird geladen …</p>`;
+  let d;
+  try { d = await (await rpc("admin_list", { p_pw: adminPw.get() })).json(); }
+  catch (e) {
+    if (e.message === "not_allowed") { adminPw.set(""); toast("Falsches Passwort"); return renderAdmin(); }
+    b.innerHTML = `<p class="hint warn">Die Daten konnten nicht geladen werden. Prüfe die Internetverbindung.</p><button type="button" class="act wide" id="admretry">Erneut versuchen</button>`;
+    $("#admretry").onclick = renderAdmin; return;
+  }
+  if (view !== "admin") return;
+  const c = d.contest;
+  const fmt = (x) => x ? new Date(x).toLocaleString("de-DE", { day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" }) : "";
+  b.innerHTML = `
+    <section class="card adm-card"><h3 class="card-t">Fotos prüfen (${d.pending.length})</h3>
+      ${d.pending.length ? `<ul class="adm-photos">${d.pending.map((x) => `<li><img src="${isPhoto(x.photo) ? x.photo : ""}" alt="Foto von ${esc(x.name)}"><div class="adm-pmain"><strong>${esc(x.name)}</strong><span class="fine">${esc(fmt(x.at))}</span>
+        <div class="row2"><button type="button" class="act danger" data-adm="photo_reject" data-id="${x.id}">Ablehnen</button><button type="button" class="act primary" data-adm="photo_ok" data-id="${x.id}">Freigeben</button></div></div></li>`).join("")}</ul>` : `<p class="fine">Keine Fotos zu prüfen.</p>`}
+    </section>
+    <section class="card adm-card"><h3 class="card-t">Gewinnspiel</h3>
+      ${c ? `<p>Ende: <strong>${esc(fmt(c.ends_at))}</strong></p>
+        ${c.decided ? (c.winner_name ? `<p>Gewinner: <strong>${esc(c.winner_name)}</strong> mit ${num(c.winner_points || 0)} Punkten</p><p>Gewinncode: <strong class="adm-code">${esc(c.code)}</strong></p><p>Kontakt: <strong>${esc(c.contact || "keiner angegeben")}</strong></p>` : `<p>Niemand hat Punkte gesammelt.</p>`) : `<p class="fine">Läuft noch. Der Gewinner erscheint hier nach dem Ende.</p>`}` : `<p class="fine">Kein Gewinnspiel eingerichtet.</p>`}
+    </section>
+    <section class="card adm-card"><h3 class="card-t">Spieler (${d.players.length})</h3>
+      <ul class="adm-players">${d.players.map((x) => `<li><span class="lb-av">${avatarHTML(x.photo, x.avatar)}</span><span class="adm-pname">${esc(x.name)}${x.name_ok ? "" : ' <span class="adm-flag">gesperrter Name</span>'}${x.has_contact ? ' <span class="adm-flag ok">Kontakt</span>' : ""}<small>${num(x.round_points)} im Gewinnspiel, ${num(x.points)} gesamt</small></span><button type="button" class="linkbtn danger" data-adm="ban" data-id="${x.id}" data-name="${esc(x.name)}">Ausschließen</button></li>`).join("") || `<li class="fine">Noch niemand dabei.</li>`}</ul>
+    </section>
+    <section class="card adm-card"><h3 class="card-t">Wörter sperren</h3>
+      <p class="fine">Spitznamen mit diesem Wort werden abgelehnt und aus der Rangliste ausgeblendet. Eine feste Liste mit Beleidigungen in fünf Sprachen ist schon eingebaut.</p>
+      <form id="admword" class="answer"><label class="sr-only" for="admw">Wort</label><input id="admw" maxlength="40" autocomplete="off" placeholder="Wort"><button class="act primary" type="submit">Sperren</button></form>
+      ${d.words.length ? `<ul class="adm-words">${d.words.map((w) => `<li><span>${esc(w)}</span><button type="button" class="linkbtn" data-adm="unblock_word" data-text="${esc(w)}">Freigeben</button></li>`).join("")}</ul>` : ""}
+    </section>
+    ${d.banned.length ? `<section class="card adm-card"><h3 class="card-t">Ausgeschlossen (${d.banned.length})</h3><ul class="adm-words">${d.banned.map((x) => `<li><span>${esc(x.name || "?")}</span><button type="button" class="linkbtn" data-adm="unban" data-id="${x.id}">Wieder zulassen</button></li>`).join("")}</ul></section>` : ""}
+    <div class="row2"><button type="button" class="act" id="admreload">Aktualisieren</button><button type="button" class="act" id="admout">Abmelden</button></div>`;
+  $("#admreload").onclick = renderAdmin;
+  $("#admout").onclick = () => { adminPw.set(""); renderAdmin(); };
+  $("#admword").onsubmit = async (e) => { e.preventDefault(); const w = $("#admw").value.trim(); if (w && await adminAction("block_word", null, w)) { toast("Wort gesperrt"); renderAdmin(); } };
+  b.querySelectorAll("[data-adm]").forEach((btn) => btn.onclick = async () => {
+    const a = btn.dataset.adm;
+    if (a === "ban" && !confirmInline(btn, `„${btn.dataset.name}“ ausschließen? Der Eintrag wird gelöscht und das Gerät kann nicht mehr mitmachen.`)) return;
+    if (await adminAction(a, btn.dataset.id, btn.dataset.text)) { toast({ photo_ok: "Foto freigegeben", photo_reject: "Foto abgelehnt", ban: "Ausgeschlossen", unban: "Wieder zugelassen", unblock_word: "Wort freigegeben" }[a] || "Erledigt"); renderAdmin(); }
+  });
+}
+// Zweimal tippen statt Browser-Dialog: der erste Tipp fragt nach, der zweite führt aus
+function confirmInline(btn, msg) {
+  if (btn.dataset.armed) return true;
+  btn.dataset.armed = "1"; btn.textContent = "Wirklich?"; toast(msg);
+  setTimeout(() => { if (btn.isConnected) { delete btn.dataset.armed; btn.textContent = "Ausschließen"; } }, 5000);
+  return false;
 }
 
 /* ---------------- Einstellungen ---------------- */
@@ -1324,8 +1444,8 @@ if (mqDark.addEventListener) mqDark.addEventListener("change", () => { if (theme
 
 /* ---------------- Navigation ---------------- */
 let view = "map";
-const VIEWS = ["map", "today", "games", "scan", "ranking", "profile", "settings", "add"];
-const NAV_OF = { map: "map", add: "map", today: "today", games: "games", scan: "scan", ranking: "ranking", profile: "profile", settings: "profile" };
+const VIEWS = ["map", "today", "games", "scan", "ranking", "profile", "settings", "add", "admin"];
+const NAV_OF = { map: "map", add: "map", today: "today", games: "games", scan: "scan", ranking: "ranking", profile: "profile", settings: "profile", admin: "profile" };
 function go(v) {
   if (!VIEWS.includes(v)) return;
   if (v === view) { if (v === "games" && game) { game = null; renderGames(); } return; }
@@ -1339,6 +1459,7 @@ function go(v) {
   if (v === "profile") renderProfile();
   if (v === "settings") renderSettings();
   if (v === "ranking") renderRanking();
+  if (v === "admin") renderAdmin();
   if (v === "scan") startScanner();
   if (v === "add") enterAdd();
   if (v === "map") setSheet(sheetState);
@@ -1370,3 +1491,5 @@ scheduleReminder();
 if (profile.lbOptIn) { lbQueueSync(); setTimeout(checkWin, 2500); }
 window.addEventListener("online", () => { if (profile.lbOptIn) lbQueueSync(); });
 if (/^#(spiel|raetsel)$/.test(location.hash)) go("games");
+if (location.hash === "#admin") go("admin");
+window.addEventListener("hashchange", () => { if (location.hash === "#admin") go("admin"); });

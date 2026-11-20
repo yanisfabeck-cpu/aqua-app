@@ -2755,6 +2755,54 @@ const TR = {
 "Aqua Map – Gratis Drénkwaasser zu Lëtzebuerg",
 "Aqua Map – Água potável grátis no Luxemburgo"
 ],
+"Eigene Fotos prüft das Aqua-Map-Team, bevor andere sie in der Rangliste sehen. Beleidigende oder unpassende Fotos werden abgelehnt.": [
+"L'équipe Aqua Map vérifie les photos avant que les autres les voient dans le classement. Les photos insultantes ou inappropriées sont refusées.",
+"The Aqua Map team checks photos before others can see them on the leaderboard. Offensive or inappropriate photos are rejected.",
+"D'Aqua-Map-Team kontrolléiert eegen Fotoen, ier anerer se an der Ranglëscht gesinn. Beleidegend oder onpassend Fotoe ginn ofgeleent.",
+"A equipa da Aqua Map verifica as fotos antes de os outros as verem na classificação. Fotos ofensivas ou impróprias são recusadas."
+],
+"Dieser Spitzname ist nicht erlaubt. Bitte wähle einen anderen.": [
+"Ce pseudo n'est pas autorisé. Choisis-en un autre.",
+"This nickname isn't allowed. Please choose another one.",
+"Dëse Spëtznumm ass net erlaabt. Wiel w.e.g. en aneren.",
+"Esta alcunha não é permitida. Escolhe outra."
+],
+"Wer schummelt oder beleidigende Namen oder Fotos benutzt, wird ausgeschlossen.": [
+"Toute triche ou tout pseudo ou photo insultant entraîne l'exclusion.",
+"Anyone who cheats or uses offensive names or photos is disqualified.",
+"Wien fuddelt oder beleidegend Nimm oder Fotoe benotzt, gëtt ausgeschloss.",
+"Quem fizer batota ou usar nomes ou fotos ofensivos é excluído."
+],
+"Du bist von der Rangliste ausgeschlossen.": [
+"Tu as été exclu du classement.",
+"You have been removed from the leaderboard.",
+"Du bass vun der Ranglëscht ausgeschloss.",
+"Foste excluído da classificação."
+],
+"Dein Spitzname ist in der Rangliste nicht erlaubt. Bitte ändere ihn in deinem Profil.": [
+"Ton pseudo n'est pas autorisé dans le classement. Modifie-le dans ton profil.",
+"Your nickname isn't allowed on the leaderboard. Please change it in your profile.",
+"Däi Spëtznumm ass an der Ranglëscht net erlaabt. Änner en w.e.g. an dengem Profil.",
+"A tua alcunha não é permitida na classificação. Altera-a no teu perfil."
+],
+"Spitzname ändern": [
+"Modifier le pseudo",
+"Change nickname",
+"Spëtznumm änneren",
+"Alterar alcunha"
+],
+"Dein Foto wurde nicht freigegeben. Du kannst ein anderes wählen.": [
+"Ta photo n'a pas été acceptée. Tu peux en choisir une autre.",
+"Your photo wasn't approved. You can choose another one.",
+"Deng Foto gouf net fräigeschalt. Du kanns eng aner wielen.",
+"A tua foto não foi aprovada. Podes escolher outra."
+],
+"Dein Foto wird noch geprüft. Andere sehen es erst, wenn es freigegeben ist.": [
+"Ta photo est en cours de vérification. Les autres la verront une fois acceptée.",
+"Your photo is still being checked. Others will see it once it's approved.",
+"Deng Foto gëtt nach kontrolléiert. Anerer gesinn se eréischt, wann se fräigeschalt ass.",
+"A tua foto ainda está a ser verificada. Os outros só a veem depois de aprovada."
+],
 "Spiel": [
 "Jeux",
 "Games",
@@ -2784,12 +2832,6 @@ const TR = {
 "Or choose a picture:",
 "Oder wiel e Bild:",
 "Ou escolhe uma imagem:"
-],
-"Wenn du bei der Rangliste mitmachst, sehen andere dein Bild. Nimm kein Foto, das du nicht öffentlich zeigen willst.": [
-"Si tu participes au classement, les autres voient ton image. Ne prends pas de photo que tu ne veux pas montrer à tout le monde.",
-"If you join the leaderboard, others will see your picture. Don't use a photo you wouldn't want to show publicly.",
-"Wann s de bei der Ranglëscht matmaachs, gesinn anerer däi Bild. Huel keng Foto, déi s de net ëffentlech weise wëlls.",
-"Se entrares na classificação, os outros veem a tua imagem. Não uses uma foto que não queiras mostrar a todos."
 ],
 "Beendet": [
 "Terminé",
@@ -2850,12 +2892,6 @@ const TR = {
 "We only use contact details to notify the winner. After the contest we delete all the others.",
 "Kontakter benotze mir nëmmen, fir de Gewënner ze informéieren. Nom Concours läsche mir all déi aner.",
 "Usamos os contactos só para avisar o vencedor. Depois do passatempo apagamos todos os outros."
-],
-"Wer schummelt, wird ausgeschlossen.": [
-"Toute triche entraîne l'exclusion.",
-"Anyone who cheats is disqualified.",
-"Wien fuddelt, gëtt ausgeschloss.",
-"Quem fizer batota é excluído."
 ],
 "Gewinnspiel": [
 "Concours",
