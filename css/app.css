@@ -287,9 +287,10 @@ body:not([data-view="map"]) #topbar,body:not([data-view="map"]) #sheet{display:n
 .badge.visited{background:var(--good-bg);color:var(--good-ink)}
 
 /* ============ Menü unten ============ */
-#nav{flex:0 0 auto;display:grid;grid-template-columns:repeat(5,1fr);border-top:1px solid var(--line);background:var(--white)}
+#nav{flex:0 0 auto;display:grid;grid-template-columns:repeat(6,minmax(0,1fr));border-top:1px solid var(--line);background:var(--white)}
 #nav button{border:0;background:none;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;padding:8px 2px;cursor:pointer;color:var(--ink-soft);font-size:12px;font-weight:600;min-height:58px}
 #nav button svg{display:block}
+#nav button>span:last-child{display:block;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;letter-spacing:-.01em}
 #nav button[aria-current="page"]{color:var(--sky-text)}
 #nav button[aria-current="page"]>svg,#nav button[aria-current="page"] .nav-avatar{transform:translateY(-1px)}
 #nav .nav-avatar{display:grid;place-items:center;width:26px;height:26px}
@@ -299,8 +300,8 @@ body:not([data-view="map"]) #topbar,body:not([data-view="map"]) #sheet{display:n
 #nav .nav-scan[aria-current="page"] .bubble{background:var(--ink)}
 @media (max-width:760px){
   #nav{position:fixed;left:0;right:0;bottom:0;z-index:800;padding-bottom:env(safe-area-inset-bottom);box-shadow:0 -2px 12px rgba(19,48,77,.08)}
-  #nav button{min-height:62px;font-size:11.5px}
-  #nav .bubble{width:54px;height:54px;margin-top:-26px;box-shadow:0 4px 14px rgba(0,163,224,.45),0 0 0 4px var(--white)}
+  #nav button{min-height:62px;font-size:11px;padding:8px 1px}
+  #nav .bubble{width:50px;height:50px;margin-top:-24px;box-shadow:0 4px 14px rgba(0,163,224,.45),0 0 0 4px var(--white)}
   .page{position:fixed;left:0;right:0;top:0;bottom:var(--nav-h);z-index:700;padding-top:env(safe-area-inset-top)}
   body[data-view="add"] #page-add{top:auto;max-height:68vh;border-radius:20px 20px 0 0;box-shadow:0 -6px 24px rgba(19,48,77,.18)}
   body[data-view="add"] #page-add .page-body{padding-top:16px}

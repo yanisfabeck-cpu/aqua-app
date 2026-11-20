@@ -351,7 +351,7 @@ function renderGames() {
   const nR = Object.keys(profile.riddles).length, nQ = Object.keys(profile.quiz).length;
   const nA = Object.keys(profile.anagrams).filter((k) => k.startsWith(LANG + ":")).length;
   const lv = levelOf(profile.points);
-  $("#games-body").innerHTML = `${backBtnHTML(t("Heute"), "gtoday")}
+  $("#games-body").innerHTML = `
     <p class="points-line"><span class="pts"><strong id="gpoints">${num(profile.points)}</strong> ${esc(t("Punkte"))}</span>${profile.name ? `<span class="fine">${esc(t("Level {n}: {name}", { n: lv.i + 1, name: lv.name }))}</span>` : `<button type="button" class="linkbtn" data-go="profile">${esc(t("Profil erstellen, um Abzeichen zu sammeln"))}</button>`}</p>
     <ul class="modes">
       <li><button type="button" class="mode" data-mode="riddle">${dropSVG("brunnen", 30)}<span class="m-main"><span class="m-title">${esc(t("Wasser-Rätsel"))}</span><span class="m-desc">${esc(t("Errate, was gemeint ist. Tipps helfen dir weiter."))}</span></span><span class="m-prog">${esc(t("{a} von {b}", { a: nR, b: RIDDLES.length }))}</span></button></li>
@@ -363,7 +363,6 @@ function renderGames() {
     const m = b.dataset.mode;
     if (m === "riddle") startRiddle(); else if (m === "quiz") startQuiz(); else startAnagram();
   });
-  $("#gtoday").onclick = () => go("today");
 }
 function renderGame() {
   if (game.mode === "riddle") renderRiddle(); else if (game.mode === "quiz") renderQuiz(); else renderAnagram();
@@ -1326,7 +1325,7 @@ if (mqDark.addEventListener) mqDark.addEventListener("change", () => { if (theme
 /* ---------------- Navigation ---------------- */
 let view = "map";
 const VIEWS = ["map", "today", "games", "scan", "ranking", "profile", "settings", "add"];
-const NAV_OF = { map: "map", add: "map", today: "today", games: "today", scan: "scan", ranking: "ranking", profile: "profile", settings: "profile" };
+const NAV_OF = { map: "map", add: "map", today: "today", games: "games", scan: "scan", ranking: "ranking", profile: "profile", settings: "profile" };
 function go(v) {
   if (!VIEWS.includes(v)) return;
   if (v === view) { if (v === "games" && game) { game = null; renderGames(); } return; }
@@ -1352,10 +1351,21 @@ document.addEventListener("click", (e) => { const b = e.target.closest("[data-go
 function onDataReady() { drawReports(); }
 
 /* ---------------- Start ---------------- */
+// Menü mit sechs Punkten: zu lange Wörter (z. B. „Classificação“) etwas kleiner setzen, damit sie hineinpassen
+function fitNavLabels() {
+  document.querySelectorAll("#nav button > span:last-child").forEach((el) => {
+    el.style.fontSize = "";
+    let size = parseFloat(getComputedStyle(el).fontSize);
+    while (el.scrollWidth > el.clientWidth + 0.5 && size > 9) { size -= 0.5; el.style.fontSize = size + "px"; }
+  });
+}
+window.addEventListener("resize", fitNavLabels);
+if (document.fonts && document.fonts.ready) document.fonts.ready.then(fitNavLabels);
 document.title = t("Aqua Map – Gratis Trinkwasser in Luxemburg");
 renderNavAvatar();
 drawReports();
 coreInit();
+fitNavLabels();
 scheduleReminder();
 if (profile.lbOptIn) { lbQueueSync(); setTimeout(checkWin, 2500); }
 window.addEventListener("online", () => { if (profile.lbOptIn) lbQueueSync(); });

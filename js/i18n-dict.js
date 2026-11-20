@@ -2653,12 +2653,6 @@ const TR = {
 "Deng Schrëtt, däi Waasser an deng Rätselen.",
 "Os teus passos, a tua água e as tuas adivinhas."
 ],
-"Rätsel": [
-"Énigmes",
-"Riddles",
-"Rätselen",
-"Adivinhas"
-],
 "QR-Code scannen": [
 "Scanner un code QR",
 "Scan a QR code",
@@ -2760,6 +2754,12 @@ const TR = {
 "Aqua Map – Free drinking water in Luxembourg",
 "Aqua Map – Gratis Drénkwaasser zu Lëtzebuerg",
 "Aqua Map – Água potável grátis no Luxemburgo"
+],
+"Spiel": [
+"Jeux",
+"Games",
+"Spiller",
+"Jogos"
 ],
 "Profilbild": [
 "Photo de profil",
