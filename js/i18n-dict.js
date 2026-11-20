@@ -793,12 +793,6 @@ const TR = {
 "z. B. Bueremaus",
 "p. ex. Raposa das Fontes"
 ],
-"Wähle ein Bild": [
-"Choisis une image",
-"Choose a picture",
-"Wiel e Bild",
-"Escolhe uma imagem"
-],
 "Deine bisherigen {n} Punkte werden übernommen.": [
 "Tes {n} points actuels sont conservés.",
 "Your {n} points so far will be kept.",
@@ -1969,18 +1963,6 @@ const TR = {
 "Matmaachen",
 "Entrar"
 ],
-"Du machst bei der Rangliste nicht mit.": [
-"Tu ne participes pas au classement.",
-"You are not on the leaderboard.",
-"Du méchs net bei der Ranglëscht mat.",
-"Não estás na classificação."
-],
-"Doch mitmachen": [
-"Participer quand même",
-"Join after all",
-"Dach matmaachen",
-"Afinal, entrar"
-],
 "Rangliste wird geladen …": [
 "Chargement du classement …",
 "Loading leaderboard …",
@@ -2778,5 +2760,323 @@ const TR = {
 "Aqua Map – Free drinking water in Luxembourg",
 "Aqua Map – Gratis Drénkwaasser zu Lëtzebuerg",
 "Aqua Map – Água potável grátis no Luxemburgo"
+],
+"Profilbild": [
+"Photo de profil",
+"Profile picture",
+"Profilbild",
+"Foto de perfil"
+],
+"Eigenes Foto": [
+"Ma photo",
+"Own photo",
+"Eegene Foto",
+"Foto própria"
+],
+"Foto entfernen": [
+"Retirer la photo",
+"Remove photo",
+"Foto ewechhuelen",
+"Remover foto"
+],
+"Oder wähle ein Bild:": [
+"Ou choisis une image :",
+"Or choose a picture:",
+"Oder wiel e Bild:",
+"Ou escolhe uma imagem:"
+],
+"Wenn du bei der Rangliste mitmachst, sehen andere dein Bild. Nimm kein Foto, das du nicht öffentlich zeigen willst.": [
+"Si tu participes au classement, les autres voient ton image. Ne prends pas de photo que tu ne veux pas montrer à tout le monde.",
+"If you join the leaderboard, others will see your picture. Don't use a photo you wouldn't want to show publicly.",
+"Wann s de bei der Ranglëscht matmaachs, gesinn anerer däi Bild. Huel keng Foto, déi s de net ëffentlech weise wëlls.",
+"Se entrares na classificação, os outros veem a tua imagem. Não uses uma foto que não queiras mostrar a todos."
+],
+"Beendet": [
+"Terminé",
+"Ended",
+"Eriwwer",
+"Terminado"
+],
+"Noch {n} Tage": [
+"Encore {n} jours",
+"{n} days left",
+"Nach {n} Deeg",
+"Faltam {n} dias"
+],
+"Noch 1 Tag": [
+"Encore 1 jour",
+"1 day left",
+"Nach 1 Dag",
+"Falta 1 dia"
+],
+"Noch {n} Std.": [
+"Encore {n} h",
+"{n} h left",
+"Nach {n} St.",
+"Faltam {n} h"
+],
+"Teilnahmebedingungen": [
+"Règlement",
+"Rules",
+"Konditioune fir matzemaachen",
+"Regulamento"
+],
+"Mitmachen ist kostenlos. Du brauchst ein Profil und musst bei der Rangliste mitmachen.": [
+"La participation est gratuite. Il te faut un profil et tu dois participer au classement.",
+"Taking part is free. You need a profile and must join the leaderboard.",
+"Matmaachen ass gratis. Du brauchs e Profil a muss bei der Ranglëscht matmaachen.",
+"Participar é grátis. Precisas de um perfil e de entrar na classificação."
+],
+"Es zählen die Punkte, die du während des Gewinnspiels sammelst, höchstens 500 pro Tag.": [
+"Seuls comptent les points gagnés pendant le concours, au maximum 500 par jour.",
+"Only points earned during the contest count, at most 500 per day.",
+"Et zielen d'Punkten, déi s de während dem Concours sammels, héchstens 500 pro Dag.",
+"Contam os pontos que ganhas durante o passatempo, no máximo 500 por dia."
+],
+"Wer am {date} um 23:59 Uhr auf Platz 1 liegt, gewinnt eine Trinkflasche. Bei Gleichstand gewinnt, wer die Punktzahl zuerst erreicht hat.": [
+"Qui est 1er le {date} à 23 h 59 gagne une gourde. En cas d'égalité, gagne celui qui a atteint le score en premier.",
+"Whoever is in first place on {date} at 11:59 pm wins a water bottle. In a tie, whoever reached the score first wins.",
+"Wien den {date} um 23:59 Auer op der éischter Plaz ass, gewënnt eng Drénkfläsch. Bei Gläichstand gewënnt deen, deen d'Punktzuel als Éischten hat.",
+"Quem estiver em 1.º lugar a {date} às 23h59 ganha uma garrafa. Em caso de empate, ganha quem chegou primeiro a essa pontuação."
+],
+"Der Gewinner sieht die Nachricht in der App. Wer einen Kontakt angegeben hat, wird zusätzlich benachrichtigt.": [
+"Le gagnant voit le message dans l'app. Si un contact a été indiqué, il est aussi prévenu par ce moyen.",
+"The winner sees the message in the app. If a contact was given, they are also notified that way.",
+"De Gewënner gesäit d'Noriicht an der App. Wien e Kontakt uginn huet, kritt zousätzlech Bescheed.",
+"O vencedor vê a mensagem na app. Quem deixou um contacto também é avisado por aí."
+],
+"Kontaktangaben nutzen wir nur, um den Gewinner zu benachrichtigen. Nach dem Gewinnspiel löschen wir alle anderen.": [
+"Nous utilisons les contacts uniquement pour prévenir le gagnant. Après le concours, nous supprimons tous les autres.",
+"We only use contact details to notify the winner. After the contest we delete all the others.",
+"Kontakter benotze mir nëmmen, fir de Gewënner ze informéieren. Nom Concours läsche mir all déi aner.",
+"Usamos os contactos só para avisar o vencedor. Depois do passatempo apagamos todos os outros."
+],
+"Wer schummelt, wird ausgeschlossen.": [
+"Toute triche entraîne l'exclusion.",
+"Anyone who cheats is disqualified.",
+"Wien fuddelt, gëtt ausgeschloss.",
+"Quem fizer batota é excluído."
+],
+"Gewinnspiel": [
+"Concours",
+"Contest",
+"Concours",
+"Passatempo"
+],
+"Das Gewinnspiel ist vorbei": [
+"Le concours est terminé",
+"The contest is over",
+"De Concours ass eriwwer",
+"O passatempo terminou"
+],
+"Der Gewinner wird gerade ermittelt.": [
+"Le gagnant est en cours de désignation.",
+"The winner is being determined.",
+"De Gewënner gëtt grad ermëttelt.",
+"O vencedor está a ser apurado."
+],
+"Du hast gewonnen!": [
+"Tu as gagné !",
+"You won!",
+"Du hues gewonnen!",
+"Ganhaste!"
+],
+"Du bist auf Platz 1 und bekommst die Trinkflasche.": [
+"Tu es 1er et tu reçois la gourde.",
+"You're in first place and get the water bottle.",
+"Du bass op der éischter Plaz a kriss d'Drénkfläsch.",
+"Ficaste em 1.º lugar e recebes a garrafa."
+],
+"Dein Gewinncode": [
+"Ton code gagnant",
+"Your winner code",
+"Däi Gewënnercode",
+"O teu código de vencedor"
+],
+"Kontakt ändern": [
+"Modifier le contact",
+"Change contact",
+"Kontakt änneren",
+"Alterar contacto"
+],
+"Kontakt angeben": [
+"Indiquer un contact",
+"Add contact",
+"Kontakt uginn",
+"Indicar contacto"
+],
+"Gewinnspiel beendet": [
+"Concours terminé",
+"Contest ended",
+"Concours eriwwer",
+"Passatempo terminado"
+],
+"{name} hat die Trinkflasche gewonnen": [
+"{name} a gagné la gourde",
+"{name} won the water bottle",
+"{name} huet d'Drénkfläsch gewonnen",
+"{name} ganhou a garrafa"
+],
+"Mit {n} Punkten. Herzlichen Glückwunsch!": [
+"Avec {n} points. Félicitations !",
+"With {n} points. Congratulations!",
+"Mat {n} Punkten. Félicitatiounen!",
+"Com {n} pontos. Parabéns!"
+],
+"Diesmal hat niemand Punkte gesammelt.": [
+"Cette fois, personne n'a gagné de points.",
+"Nobody earned points this time.",
+"Dës Kéier huet keen Punkte gesammelt.",
+"Desta vez ninguém ganhou pontos."
+],
+"Bald gibt es ein neues Gewinnspiel.": [
+"Un nouveau concours arrive bientôt.",
+"A new contest is coming soon.",
+"Geschwë gëtt et en neie Concours.",
+"Em breve há um novo passatempo."
+],
+"Platz 1 gewinnt eine Trinkflasche": [
+"Le 1er gagne une gourde",
+"First place wins a water bottle",
+"Déi éischt Plaz gewënnt eng Drénkfläsch",
+"O 1.º lugar ganha uma garrafa"
+],
+"Sammle bis zum {date} die meisten Punkte.": [
+"Gagne le plus de points d'ici au {date}.",
+"Earn the most points by {date}.",
+"Sammel bis den {date} déi meescht Punkten.",
+"Ganha mais pontos até {date}."
+],
+"Kontakt, falls du gewinnst": [
+"Contact, si tu gagnes",
+"Contact in case you win",
+"Kontakt, wann s de gewënns",
+"Contacto, se ganhares"
+],
+"E-Mail oder Telefonnummer": [
+"E-mail ou numéro de téléphone",
+"Email or phone number",
+"E-Mail oder Telefonsnummer",
+"E-mail ou número de telefone"
+],
+"Nur das Aqua-Map-Team sieht diese Angabe. Wir nutzen sie nur, um dich bei einem Gewinn zu benachrichtigen, und löschen sie nach dem Gewinnspiel, außer beim Gewinner. Bist du unter 16, frag vorher deine Eltern.": [
+"Seule l'équipe Aqua Map voit cette information. Nous l'utilisons uniquement pour te prévenir si tu gagnes et la supprimons après le concours, sauf pour le gagnant. Si tu as moins de 16 ans, demande d'abord à tes parents.",
+"Only the Aqua Map team sees this. We use it only to tell you if you win and delete it after the contest, except for the winner. If you're under 16, ask your parents first.",
+"Just d'Aqua-Map-Team gesäit dës Angab. Mir benotzen se nëmmen, fir dech bei engem Gewënn ze informéieren, a läsche se nom Concours, ausser beim Gewënner. Bass de ënner 16, fro virdrun deng Elteren.",
+"Só a equipa da Aqua Map vê este dado. Usamo-lo apenas para te avisar se ganhares e apagamo-lo depois do passatempo, exceto o do vencedor. Se tens menos de 16 anos, pergunta primeiro aos teus pais."
+],
+"Kontakt gespeichert. Wir melden uns, wenn du gewinnst.": [
+"Contact enregistré. Nous te contacterons si tu gagnes.",
+"Contact saved. We'll get in touch if you win.",
+"Kontakt gespäichert. Mir mellen eis, wann s de gewënns.",
+"Contacto guardado. Falamos contigo se ganhares."
+],
+"Kontakt gelöscht": [
+"Contact supprimé",
+"Contact deleted",
+"Kontakt geläscht",
+"Contacto apagado"
+],
+"Das hat nicht geklappt. Prüfe deine Internetverbindung.": [
+"Ça n'a pas marché. Vérifie ta connexion Internet.",
+"That didn't work. Check your internet connection.",
+"Dat huet net geklappt. Kuck deng Internetverbindung no.",
+"Não funcionou. Verifica a tua ligação à Internet."
+],
+"Kontakt für das Gewinnspiel": [
+"Contact pour le concours",
+"Contact for the contest",
+"Kontakt fir de Concours",
+"Contacto para o passatempo"
+],
+"Hinterlegt: {c}": [
+"Enregistré : {c}",
+"Saved: {c}",
+"Hannerluecht: {c}",
+"Guardado: {c}"
+],
+"Kontakt löschen": [
+"Supprimer le contact",
+"Delete contact",
+"Kontakt läschen",
+"Apagar contacto"
+],
+"Wir melden uns über deinen hinterlegten Kontakt. Zeig den Code, wenn du die Flasche bekommst.": [
+"Nous te contacterons via le contact indiqué. Montre le code quand tu reçois la gourde.",
+"We'll contact you using the details you left. Show the code when you get the bottle.",
+"Mir mellen eis iwwer däi Kontakt. Weis de Code, wann s de d'Fläsch kriss.",
+"Vamos contactar-te pelo contacto que deixaste. Mostra o código quando receberes a garrafa."
+],
+"Gib an, wie wir dich erreichen können, damit du die Flasche bekommst. Zeig den Code bei der Übergabe.": [
+"Indique comment te joindre pour recevoir la gourde. Montre le code lors de la remise.",
+"Tell us how to reach you so you can get the bottle. Show the code when you collect it.",
+"So eis, wéi mir dech erreechen, fir datt s de d'Fläsch kriss. Weis de Code bei der Iwwergab.",
+"Diz-nos como te contactar para receberes a garrafa. Mostra o código na entrega."
+],
+"Gewinnt die Trinkflasche": [
+"Gagne la gourde",
+"Wins the water bottle",
+"Gewënnt d'Drénkfläsch",
+"Ganha a garrafa"
+],
+"Die ersten drei": [
+"Les trois premiers",
+"Top three",
+"Déi éischt dräi",
+"Os três primeiros"
+],
+"Beim Gewinnspiel mitmachen?": [
+"Participer au concours ?",
+"Join the contest?",
+"Beim Concours matmaachen?",
+"Entrar no passatempo?"
+],
+"Sammle Punkte, um ins Gewinnspiel zu kommen.": [
+"Gagne des points pour entrer dans le concours.",
+"Earn points to get into the contest.",
+"Sammel Punkten, fir an de Concours ze kommen.",
+"Ganha pontos para entrar no passatempo."
+],
+"Du liegst vorne! Halte durch bis zum Ende.": [
+"Tu es en tête ! Tiens bon jusqu'à la fin.",
+"You're in the lead! Hold on until the end.",
+"Du bass vir! Hal duer bis um Enn.",
+"Estás à frente! Aguenta até ao fim."
+],
+"Noch {n} Punkte bis Platz 1": [
+"Encore {n} points pour la 1re place",
+"{n} points to first place",
+"Nach {n} Punkte bis op déi éischt Plaz",
+"Faltam {n} pontos para o 1.º lugar"
+],
+"Kontakt für den Gewinnfall: {c}": [
+"Contact si tu gagnes : {c}",
+"Contact if you win: {c}",
+"Kontakt am Gewënnfall: {c}",
+"Contacto se ganhares: {c}"
+],
+"Noch kein Kontakt für den Gewinnfall hinterlegt.": [
+"Pas encore de contact au cas où tu gagnes.",
+"No contact saved in case you win.",
+"Nach kee Kontakt fir de Gewënnfall hannerluecht.",
+"Ainda não deixaste contacto para o caso de ganhares."
+],
+"Ändern": [
+"Modifier",
+"Change",
+"Änneren",
+"Alterar"
+],
+"Hinzufügen": [
+"Ajouter",
+"Add",
+"Derbäisetzen",
+"Adicionar"
+],
+"In der Rangliste stehen die Punkte aus dem Gewinnspiel. Deine Gesamtpunkte siehst du im Profil.": [
+"Le classement affiche les points du concours. Ton total est dans ton profil.",
+"The leaderboard shows contest points. Your total points are in your profile.",
+"An der Ranglëscht stinn d'Punkte vum Concours. Deng Gesamtpunkte gesäis de am Profil.",
+"A classificação mostra os pontos do passatempo. O teu total está no perfil."
 ]
 };

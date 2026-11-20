@@ -25,7 +25,7 @@ const PROFILE_KEY = "aqua-profile-v1";
 const AVATARS = ["💧", "🐟", "🐳", "🦆", "🐸", "🌊", "🐬", "🦦"];
 const LEVELS = [[0, "Tropfen"], [50, "Pfütze"], [150, "Bach"], [300, "Fluss"], [600, "See"], [1000, "Ozean"]];
 function blankProfile() {
-  return { name: "", avatar: "💧", created: null, points: 0, riddles: {}, quiz: {}, quizBest: 0, anagrams: {}, visits: {}, scans: 0, reports: [], badges: {}, lbOptIn: null, stepAwards: {}, waterAwards: {} };
+  return { name: "", avatar: "💧", created: null, points: 0, riddles: {}, quiz: {}, quizBest: 0, anagrams: {}, visits: {}, scans: 0, reports: [], badges: {}, lbOptIn: null, stepAwards: {}, waterAwards: {}, photo: null, photoVer: 0, contactHint: "", contactRound: null };
 }
 let profile = Object.assign(blankProfile(), store.get(PROFILE_KEY, {}));
 
@@ -63,10 +63,34 @@ function award(points, why) {
   const p = $("#gpoints"); if (p) p.textContent = num(profile.points);
 }
 const navIconHTML = $("#navavatar").innerHTML;
+// Foto (nur echte Bilddaten) oder Emoji
+const isPhoto = (p) => typeof p === "string" && /^data:image\/(jpeg|png|webp);base64,/.test(p);
+const avatarHTML = (photo, emoji) => isPhoto(photo) ? `<img src="${photo}" alt="" draggable="false">` : esc(emoji || "💧");
 function renderNavAvatar() {
   const el = $("#navavatar");
-  if (profile.name) { el.textContent = profile.avatar; el.classList.add("emoji"); }
-  else { el.innerHTML = navIconHTML; el.classList.remove("emoji"); }
+  if (profile.name) { el.innerHTML = avatarHTML(profile.photo, profile.avatar); el.classList.add("emoji"); el.classList.toggle("photo", isPhoto(profile.photo)); }
+  else { el.innerHTML = navIconHTML; el.classList.remove("emoji", "photo"); }
+}
+// Foto aus der Galerie oder Kamera: quadratisch zuschneiden und klein speichern (128 px, JPEG)
+async function photoFromFile(file) {
+  const url = URL.createObjectURL(file);
+  try {
+    const img = await new Promise((ok, bad) => { const i = new Image(); i.onload = () => ok(i); i.onerror = bad; i.src = url; });
+    const w = img.naturalWidth, h = img.naturalHeight, side = Math.min(w, h);
+    if (!side) throw new Error("empty");
+    // in zwei Schritten verkleinern, damit das Bild nicht pixelig wird
+    const mid = document.createElement("canvas"); mid.width = mid.height = Math.min(512, side);
+    const mctx = mid.getContext("2d"); mctx.imageSmoothingQuality = "high";
+    mctx.drawImage(img, (w - side) / 2, (h - side) / 2, side, side, 0, 0, mid.width, mid.height);
+    const c = document.createElement("canvas"); c.width = c.height = 128;
+    const ctx = c.getContext("2d"); ctx.imageSmoothingQuality = "high";
+    ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, 128, 128);
+    ctx.drawImage(mid, 0, 0, 128, 128);
+    let q = 0.82, data = c.toDataURL("image/jpeg", q);
+    while (data.length > 18000 && q > 0.35) { q -= 0.12; data = c.toDataURL("image/jpeg", q); }
+    if (!isPhoto(data) || data.length > 20000) throw new Error("too big");
+    return data;
+  } finally { URL.revokeObjectURL(url); }
 }
 const solvedCount = () => Object.keys(profile.riddles).length + Object.keys(profile.anagrams).length + Object.keys(profile.quiz).length;
 const BADGE_ICON = (on) => `<svg width="34" height="34" viewBox="0 0 34 34" aria-hidden="true"><circle cx="17" cy="17" r="16" fill="${on ? "var(--sky-wash)" : "var(--mist)"}"/><path d="M17 6.5c-2.3 3.3-6.8 8.2-6.8 12.1a6.8 6.8 0 0 0 13.6 0c0-3.9-4.5-8.8-6.8-12.1z" fill="${on ? "#00A3E0" : "var(--line)"}"/>${on ? '<path d="m13.8 19.2 2.3 2.2 4.3-4.6" stroke="#fff" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>' : ""}</svg>`;
@@ -75,8 +99,17 @@ function profileForm(editing) {
   return `<form id="profform" class="form">
     ${editing ? "" : `<p class="lead">${esc(t("Mit einem Profil sammelst du Punkte für Rätsel, Schritte, besuchte Brunnen und Meldungen, schaltest Abzeichen frei und kannst in der Rangliste mitmachen."))}</p>`}
     <label class="field"><span>${esc(t("Dein Spitzname"))}</span><input id="pname" maxlength="24" required autocomplete="nickname" value="${esc(profile.name)}" placeholder="${esc(t("z. B. Brunnenfuchs"))}"></label>
-    <fieldset class="field"><legend>${esc(t("Wähle ein Bild"))}</legend>
-      <div class="avatars">${AVATARS.map((a) => `<label><input type="radio" name="pav" value="${a}" ${a === profile.avatar ? "checked" : ""}><span>${a}</span></label>`).join("")}</div>
+    <fieldset class="field"><legend>${esc(t("Profilbild"))}</legend>
+      <div class="photo-row">
+        <span class="photo-prev" id="photoprev" aria-hidden="true">${avatarHTML(profile.photo, profile.avatar)}</span>
+        <div class="photo-btns">
+          <label class="act file-act"><input type="file" id="photofile" accept="image/*" class="sr-only"><svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8.5A1.5 1.5 0 0 1 5.5 7h2.2l1.5-2h5.6l1.5 2h2.2A1.5 1.5 0 0 1 20 8.5v9a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 17.5z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><circle cx="12" cy="13" r="3.4" fill="none" stroke="currentColor" stroke-width="2"/></svg><span>${esc(t("Eigenes Foto"))}</span></label>
+          <button type="button" class="act" id="photodel" ${isPhoto(profile.photo) ? "" : "hidden"}>${esc(t("Foto entfernen"))}</button>
+        </div>
+      </div>
+      <p class="fine" id="photonote">${esc(t("Oder wähle ein Bild:"))}</p>
+      <div class="avatars${isPhoto(profile.photo) ? " dim" : ""}" id="avgrid">${AVATARS.map((a) => `<label><input type="radio" name="pav" value="${a}" ${a === profile.avatar ? "checked" : ""}><span>${a}</span></label>`).join("")}</div>
+      <p class="fine">${esc(t("Wenn du bei der Rangliste mitmachst, sehen andere dein Bild. Nimm kein Foto, das du nicht öffentlich zeigen willst."))}</p>
     </fieldset>
     ${!editing && profile.points ? `<p class="fine">${esc(t("Deine bisherigen {n} Punkte werden übernommen.", { n: profile.points }))}</p>` : ""}
     <div class="row2">${editing ? `<button class="act" type="button" id="profcancel">${esc(t("Abbrechen"))}</button>` : ""}<button class="act primary" type="submit">${esc(editing ? t("Speichern") : t("Profil erstellen"))}</button></div>
@@ -84,12 +117,29 @@ function profileForm(editing) {
   </form>`;
 }
 function bindProfileForm(editing) {
+  let photo = profile.photo || null;
+  const showPhoto = () => {
+    const av = document.querySelector('input[name="pav"]:checked');
+    $("#photoprev").innerHTML = avatarHTML(photo, av ? av.value : profile.avatar);
+    $("#photodel").hidden = !isPhoto(photo);
+    $("#avgrid").classList.toggle("dim", isPhoto(photo));
+  };
+  $("#photofile").addEventListener("change", async (e) => {
+    const f = e.target.files && e.target.files[0]; e.target.value = "";
+    if (!f) return;
+    try { photo = await photoFromFile(f); showPhoto(); }
+    catch (er) { toast(t("Das Foto konnte nicht gelesen werden.")); }
+  });
+  $("#photodel").onclick = () => { photo = null; showPhoto(); };
+  // Wer ein Emoji antippt, möchte das Emoji statt des Fotos
+  $("#avgrid").addEventListener("change", () => { photo = null; showPhoto(); });
   $("#profform").addEventListener("submit", (e) => {
     e.preventDefault();
     const name = $("#pname").value.trim();
     if (!name) { $("#pname").focus(); return; }
     const av = document.querySelector('input[name="pav"]:checked');
     const isNew = !profile.name;
+    if ((photo || null) !== (profile.photo || null)) { profile.photo = photo; profile.photoVer = (profile.photoVer || 0) + 1; }
     profile.name = name; profile.avatar = av ? av.value : "💧";
     if (!profile.created) profile.created = new Date().toISOString();
     saveProfile(); renderProfile();
@@ -107,7 +157,7 @@ function renderProfile() {
       <p class="b-desc">${esc(t("Gemeldet am {date}", { date: new Date(r.date).toLocaleDateString(LOC()) }))}${r.note ? `, <a href="https://www.openstreetmap.org/note/${r.note}" target="_blank" rel="noopener">${esc(t("Hinweis #{id}", { id: r.note }))}</a>` : ""}</p></div></li>`).join("");
   b.innerHTML = `
     <div class="prof-head">
-      <span class="avatar-lg" aria-hidden="true">${profile.avatar}</span>
+      <span class="avatar-lg" aria-hidden="true">${avatarHTML(profile.photo, profile.avatar)}</span>
       <div><p class="prof-name">${esc(profile.name)}</p><p class="prof-level">${esc(t("Level {n}: {name}", { n: lv.i + 1, name: lv.name }))}</p></div>
     </div>
     <div class="levelbar" role="progressbar" aria-label="${esc(t("Fortschritt zum nächsten Level"))}" aria-valuenow="${pct}" aria-valuemin="0" aria-valuemax="100"><span style="width:${pct}%"></span></div>
@@ -961,9 +1011,9 @@ function updateStepsUI() {
   const ring = document.querySelector(".ring"); if (ring) ring.style.setProperty("--p", Math.min(100, Math.round(d.steps / health.goalSteps * 100)));
 }
 
-/* ---------------- Rangliste ---------------- */
-// Online-Datenbank (Supabase, Frankfurt). Der Schlüssel ist öffentlich: er erlaubt nur Lesen
-// der Rangliste und die beiden Funktionen upsert_score/remove_score, die das Geheimnis prüfen.
+/* ---------------- Rangliste und Gewinnspiel ---------------- */
+// Online-Datenbank (Supabase, Frankfurt). Der Schlüssel ist öffentlich: er erlaubt nur das Lesen
+// der Rangliste und die Funktionen upsert_score, remove_score, set_contact und contest_info, die das Geheimnis prüfen.
 const LB = { url: "https://zwperzojxovytftcvuwf.supabase.co", key: "sb_publishable_HRJUl4dzeOSkGSbj73zraQ_MaDNycjA" };
 const lbReady = () => !!(LB.url && LB.key);
 const lbIdent = (() => { let v = store.get("aqua-lb-id", null); if (!v) { const rnd = () => (crypto.randomUUID ? crypto.randomUUID() : String(Math.random()).slice(2) + Date.now()); v = { id: rnd(), secret: rnd() + rnd() }; store.set("aqua-lb-id", v); } return v; })();
@@ -974,61 +1024,217 @@ async function lbCall(path, opts = {}) {
   if (!res.ok) throw new Error("HTTP " + res.status);
   return res;
 }
+const rpc = (fn, body) => lbCall("rpc/" + fn, { method: "POST", body: JSON.stringify(body || {}) });
+const winCode = (id) => { const h = String(id).replace(/-/g, "").toUpperCase(); return `AQ-${h.slice(0, 4)}-${h.slice(-4)}`; };
+const LB_PHOTO_KEY = "aqua-lb-photo";
 let lbTimer = null;
 function lbQueueSync() { if (!lbReady()) return; clearTimeout(lbTimer); lbTimer = setTimeout(lbSync, 2500); }
 async function lbSync() {
   if (!lbReady() || !profile.name || profile.lbOptIn !== true || !navigator.onLine) return;
-  try { await lbCall("rpc/upsert_score", { method: "POST", body: JSON.stringify({ p_id: lbIdent.id, p_secret: lbIdent.secret, p_name: profile.name, p_avatar: profile.avatar, p_points: profile.points }) }); }
+  const body = { p_id: lbIdent.id, p_secret: lbIdent.secret, p_name: profile.name, p_avatar: profile.avatar, p_points: profile.points };
+  // Das Foto nur schicken, wenn es sich geändert hat
+  const photoChanged = store.get(LB_PHOTO_KEY, -1) !== (profile.photoVer || 0);
+  if (photoChanged) body.p_photo = isPhoto(profile.photo) ? profile.photo : "";
+  try { await rpc("upsert_score", body); if (photoChanged) store.set(LB_PHOTO_KEY, profile.photoVer || 0); }
   catch (e) { /* später erneut */ }
 }
 async function lbRemove() {
+  store.set(LB_PHOTO_KEY, -1);
+  profile.contactHint = ""; profile.contactRound = null;
   if (!lbReady()) return;
-  try { await lbCall("rpc/remove_score", { method: "POST", body: JSON.stringify({ p_id: lbIdent.id, p_secret: lbIdent.secret }) }); } catch (e) { /* egal */ }
+  try { await rpc("remove_score", { p_id: lbIdent.id, p_secret: lbIdent.secret }); } catch (e) { /* egal */ }
 }
+
+// Gewinnspiel
+let contest = null, contestAt = 0;
+async function loadContest(force) {
+  if (!lbReady() || !navigator.onLine) return contest;
+  if (!force && contest && Date.now() - contestAt < 60000) return contest;
+  try {
+    const r = await rpc("contest_info");
+    const c = await r.json();
+    if (c && c.id) { c.off = Date.parse(c.now) - Date.now() || 0; contest = c; } else contest = null;
+    contestAt = Date.now();
+  } catch (e) { /* alter Stand bleibt */ }
+  return contest;
+}
+const contestOpen = (c) => !!c && !c.decided && Date.parse(c.ends_at) > Date.now() + (c.off || 0);
+const dayMonth = (d) => LANG === "lb" ? `${d.getDate()}. ${LB_MONTHS[d.getMonth()]}` : d.toLocaleDateString(LOC(), { day: "numeric", month: "long" });
+function countdown(c) {
+  const ms = Date.parse(c.ends_at) - (Date.now() + (c.off || 0));
+  if (ms <= 0) return t("Beendet");
+  const days = Math.floor(ms / 86400000);
+  if (days >= 2) return t("Noch {n} Tage", { n: days });
+  if (days === 1) return t("Noch 1 Tag");
+  return t("Noch {n} Std.", { n: Math.max(1, Math.ceil(ms / 3600000)) });
+}
+const BOTTLE_SVG = `<svg class="prize-bottle" viewBox="0 0 90 160" width="78" height="139" aria-hidden="true">
+  <defs><clipPath id="bottleclip"><rect x="15" y="44" width="60" height="108" rx="17"/></clipPath></defs>
+  <rect x="31" y="5" width="28" height="13" rx="5" fill="#00A3E0"/>
+  <rect class="b-neck" x="34" y="16" width="22" height="14" rx="3" fill="#D8EEF8"/>
+  <path class="b-neck" d="M30 29h30l15 17H15z" fill="#D8EEF8"/>
+  <rect class="b-body" x="15" y="44" width="60" height="108" rx="17" fill="rgba(255,255,255,.12)"/>
+  <g clip-path="url(#bottleclip)"><path class="wave" d="M-40 84 q20 -8 40 0 t40 0 t40 0 t40 0 t40 0 t40 0 V170 H-40 Z" fill="#00A3E0"/></g>
+  <rect class="b-line" x="15" y="44" width="60" height="108" rx="17" fill="none" stroke="#fff" stroke-width="3"/>
+  <path d="M45 98c-3.2 4.6-8.6 10.5-8.6 15.3a8.6 8.6 0 0 0 17.2 0c0-4.8-5.4-10.7-8.6-15.3z" fill="#fff"/>
+  <path class="b-shine" d="M24 60v40" stroke="#fff" stroke-width="3" stroke-linecap="round" opacity=".5"/>
+</svg>`;
+const TROPHY = `<svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4h10v5a5 5 0 0 1-10 0z" fill="currentColor"/><path d="M7 6H4v1.5A3.5 3.5 0 0 0 7.5 11M17 6h3v1.5A3.5 3.5 0 0 1 16.5 11" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 14v4M8 20h8" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>`;
+function rulesHTML(c) {
+  return `<details class="prize-rules"><summary>${esc(t("Teilnahmebedingungen"))}</summary><ol>
+    <li>${esc(t("Mitmachen ist kostenlos. Du brauchst ein Profil und musst bei der Rangliste mitmachen."))}</li>
+    <li>${esc(t("Es zählen die Punkte, die du während des Gewinnspiels sammelst, höchstens 500 pro Tag."))}</li>
+    <li>${esc(t("Wer am {date} um 23:59 Uhr auf Platz 1 liegt, gewinnt eine Trinkflasche. Bei Gleichstand gewinnt, wer die Punktzahl zuerst erreicht hat.", { date: dayMonth(new Date(c.ends_at)) }))}</li>
+    <li>${esc(t("Der Gewinner sieht die Nachricht in der App. Wer einen Kontakt angegeben hat, wird zusätzlich benachrichtigt."))}</li>
+    <li>${esc(t("Kontaktangaben nutzen wir nur, um den Gewinner zu benachrichtigen. Nach dem Gewinnspiel löschen wir alle anderen."))}</li>
+    <li>${esc(t("Wer schummelt, wird ausgeschlossen."))}</li></ol></details>`;
+}
+function prizeHTML(c, me) {
+  if (!c) return "";
+  if (!c.decided && !contestOpen(c)) {
+    // gerade zu Ende, Gewinner wird beim nächsten Laden festgestellt
+    return `<section class="prize"><div class="prize-main"><p class="prize-tag">${TROPHY}${esc(t("Gewinnspiel"))}</p><p class="prize-t">${esc(t("Das Gewinnspiel ist vorbei"))}</p><p class="prize-sub">${esc(t("Der Gewinner wird gerade ermittelt."))}</p></div>${BOTTLE_SVG}</section>`;
+  }
+  if (c.decided) {
+    const iWon = c.winner_id && c.winner_id === lbIdent.id;
+    if (iWon) return `<section class="prize won"><div class="prize-main"><p class="prize-tag">${TROPHY}${esc(t("Gewinnspiel"))}</p><p class="prize-t">${esc(t("Du hast gewonnen!"))}</p>
+      <p class="prize-sub">${esc(t("Du bist auf Platz 1 und bekommst die Trinkflasche."))}</p>
+      <p class="prize-code">${esc(t("Dein Gewinncode"))} <strong>${esc(winCode(lbIdent.id))}</strong></p>
+      <button type="button" class="act prize-btn" data-contact>${esc(profile.contactHint ? t("Kontakt ändern") : t("Kontakt angeben"))}</button></div>${BOTTLE_SVG}</section>`;
+    return `<section class="prize"><div class="prize-main"><p class="prize-tag">${TROPHY}${esc(t("Gewinnspiel beendet"))}</p>
+      ${c.winner_id ? `<div class="prize-winner"><span class="lb-av">${avatarHTML(c.winner_photo, c.winner_avatar)}</span><p class="prize-t small">${esc(t("{name} hat die Trinkflasche gewonnen", { name: c.winner_name || "?" }))}</p></div>
+      <p class="prize-sub">${esc(t("Mit {n} Punkten. Herzlichen Glückwunsch!", { n: num(c.winner_points || 0) }))}</p>` : `<p class="prize-t small">${esc(t("Diesmal hat niemand Punkte gesammelt."))}</p>`}
+      <p class="prize-sub">${esc(t("Bald gibt es ein neues Gewinnspiel."))}</p></div>${BOTTLE_SVG}</section>`;
+  }
+  const end = new Date(c.ends_at);
+  return `<section class="prize" aria-labelledby="prize-t"><div class="prize-main">
+      <p class="prize-tag">${TROPHY}${esc(t("Gewinnspiel"))}</p>
+      <p class="prize-t" id="prize-t">${esc(t("Platz 1 gewinnt eine Trinkflasche"))}</p>
+      <p class="prize-sub">${esc(t("Sammle bis zum {date} die meisten Punkte.", { date: dayMonth(end) }))}</p>
+      <span class="prize-count">${esc(countdown(c))}</span>
+      ${rulesHTML(c)}
+    </div>${BOTTLE_SVG}</section>`;
+}
+const maskContact = (v) => { v = String(v || "").trim(); if (v.length <= 4) return "•".repeat(v.length); return v.slice(0, 2) + "•••" + v.slice(-3); };
+// Nach dem Ende bleibt der Kontakt nur beim Gewinner gespeichert
+const contactValid = (c) => {
+  if (!profile.contactHint) return false;
+  if (!c) return true;
+  if (c.decided) return c.winner_id === lbIdent.id;
+  return profile.contactRound == null || profile.contactRound === c.id;
+};
+function contactFieldHTML() {
+  return `<label class="field"><span>${esc(t("Kontakt, falls du gewinnst"))} <span class="opt-l">${esc(t("freiwillig"))}</span></span><input id="lbcontact" maxlength="120" autocomplete="email" inputmode="email" placeholder="${esc(t("E-Mail oder Telefonnummer"))}"></label>
+    <p class="fine">${esc(t("Nur das Aqua-Map-Team sieht diese Angabe. Wir nutzen sie nur, um dich bei einem Gewinn zu benachrichtigen, und löschen sie nach dem Gewinnspiel, außer beim Gewinner. Bist du unter 16, frag vorher deine Eltern."))}</p>`;
+}
+async function saveContact(value) {
+  value = String(value || "").trim().slice(0, 120);
+  try {
+    await lbSync();
+    const r = await rpc("set_contact", { p_id: lbIdent.id, p_secret: lbIdent.secret, p_contact: value });
+    if (!(await r.json())) throw new Error("nope");
+    profile.contactHint = value ? maskContact(value) : ""; profile.contactRound = contest ? contest.id : null;
+    saveProfile();
+    toast(value ? t("Kontakt gespeichert. Wir melden uns, wenn du gewinnst.") : t("Kontakt gelöscht"));
+    return true;
+  } catch (e) { toast(t("Das hat nicht geklappt. Prüfe deine Internetverbindung.")); return false; }
+}
+function openContactDialog() {
+  const close = openDialog(`<h2>${esc(t("Kontakt für das Gewinnspiel"))}</h2>
+    <form id="ctform" class="form">${contactFieldHTML()}
+      ${profile.contactHint ? `<p class="fine">${esc(t("Hinterlegt: {c}", { c: profile.contactHint }))}</p>` : ""}
+      <div class="row2"><button type="button" class="act" data-close>${esc(t("Abbrechen"))}</button><button type="submit" class="act primary">${esc(t("Speichern"))}</button></div>
+      ${profile.contactHint ? `<button type="button" class="linkbtn" id="ctdel">${esc(t("Kontakt löschen"))}</button>` : ""}
+    </form>`);
+  $("#ctform").onsubmit = async (e) => { e.preventDefault(); const v = $("#lbcontact").value.trim(); if (!v) { $("#lbcontact").focus(); return; } if (await saveContact(v)) { close(); if (view === "ranking") renderRanking(); } };
+  const d = $("#ctdel"); if (d) d.onclick = async () => { if (await saveContact("")) { close(); if (view === "ranking") renderRanking(); } };
+}
+document.addEventListener("click", (e) => { if (e.target.closest("[data-contact]")) openContactDialog(); });
+
+// Gewinner bekommt beim Öffnen der App eine Nachricht
+async function checkWin() {
+  if (!lbReady() || profile.lbOptIn !== true || !profile.name) return;
+  const c = await loadContest(true);
+  if (!c || !c.decided || c.winner_id !== lbIdent.id) return;
+  const k = "aqua-won-" + c.id; if (store.get(k, false)) return;
+  store.set(k, true);
+  if (navigator.vibrate && navigator.userActivation && navigator.userActivation.hasBeenActive) navigator.vibrate([90, 60, 90, 60, 160]);
+  openDialog(`<div class="won-dlg">${BOTTLE_SVG}<h2>${esc(t("Du hast gewonnen!"))}</h2>
+    <p>${esc(t("Du bist auf Platz 1 und bekommst die Trinkflasche."))}</p>
+    <p class="prize-code">${esc(t("Dein Gewinncode"))} <strong>${esc(winCode(lbIdent.id))}</strong></p>
+    <p class="fine">${esc(contactValid(c) ? t("Wir melden uns über deinen hinterlegten Kontakt. Zeig den Code, wenn du die Flasche bekommst.") : t("Gib an, wie wir dich erreichen können, damit du die Flasche bekommst. Zeig den Code bei der Übergabe."))}</p>
+    <div class="row2"><button type="button" class="act" data-close>${esc(t("Schließen"))}</button><button type="button" class="act primary" data-contact data-close>${esc(contactValid(c) ? t("Kontakt ändern") : t("Kontakt angeben"))}</button></div></div>`);
+}
+
 function howPoints() {
   return `<h3 class="sec">${esc(t("So sammelst du Punkte"))}</h3><ul class="how">
     <li>${esc(t("Rätsel lösen: bis zu 30 Punkte"))}</li><li>${esc(t("Wasserstelle besuchen (QR-Code oder Route): 20 Punkte"))}</li>
     <li>${esc(t("Fehlende Wasserstelle melden: 20 Punkte"))}</li><li>${esc(t("Trinkziel erreichen: 10 Punkte pro Tag"))}</li><li>${esc(t("1.000 Schritte: 5 Punkte"))}</li></ul>`;
 }
+const RANK_DOT = (n) => `<span class="pod-block">${n}</span>`;
+function podiumHTML(rows, key) {
+  const top = rows.filter((x) => (x[key] || 0) > 0).slice(0, 3);
+  if (!top.length) return "";
+  const slot = (x, place) => x ? `<div class="pod p${place}${x.id === lbIdent.id ? " me" : ""}"><span class="pod-av"><span class="lb-av">${avatarHTML(x.photo, x.avatar)}</span>${place === 1 && contest && !contest.decided ? `<span class="pod-prize" title="${esc(t("Gewinnt die Trinkflasche"))}"><svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="2" width="6" height="3" rx="1" fill="currentColor"/><path d="M8 6h8l2 3v11a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2V9z" fill="currentColor"/></svg></span>` : ""}</span>
+      <span class="pod-name">${esc(x.name)}</span><span class="pod-pts">${num(x[key] || 0)}</span>${RANK_DOT(place)}</div>` : `<div class="pod p${place} empty">${RANK_DOT(place)}</div>`;
+  return `<div class="podium" aria-label="${esc(t("Die ersten drei"))}">${slot(top[1], 2)}${slot(top[0], 1)}${slot(top[2], 3)}</div>`;
+}
 async function renderRanking() {
   const b = $("#ranking-body");
-  const me = (extra) => `<div class="lb-me">${profile.name ? `<span class="lb-av">${profile.avatar}</span><span class="lb-name">${esc(profile.name)}</span>` : `<span class="lb-name">${esc(t("Du"))}</span>`}<span class="lb-pts">${extra ? esc(extra) + ", " : ""}${esc(t("{n} Punkte", { n: num(profile.points) }))}</span></div>`;
+  const c = lbReady() ? await loadContest() : null;
+  if (view !== "ranking") return;
+  const prize = prizeHTML(c);
+  const meBox = (rank, pts, extra) => `<div class="lb-me"><span class="lb-av">${profile.name ? avatarHTML(profile.photo, profile.avatar) : "💧"}</span><div class="lb-me-main"><span class="lb-name">${esc(profile.name || t("Du"))}</span>${extra ? `<span class="lb-me-sub">${esc(extra)}</span>` : ""}</div><span class="lb-pts">${rank ? esc(t("Platz {n}", { n: rank })) + "<br>" : ""}<small>${esc(t("{n} Punkte", { n: num(pts) }))}</small></span></div>`;
   if (!profile.name) {
-    b.innerHTML = `${me()}<p class="lead">${esc(t("Erstelle zuerst ein Profil mit Spitzname, um in der Rangliste mitzumachen."))}</p><button type="button" class="act primary wide" data-go="profile">${esc(t("Profil erstellen"))}</button>${howPoints()}`;
+    b.innerHTML = `${prize}<p class="lead">${esc(t("Erstelle zuerst ein Profil mit Spitzname, um in der Rangliste mitzumachen."))}</p><button type="button" class="act primary wide" data-go="profile">${esc(t("Profil erstellen"))}</button>${howPoints()}`;
     return;
   }
-  if (!lbReady()) {
-    b.innerHTML = `${me()}<p class="hint">${esc(t("Die gemeinsame Rangliste wird gerade eingerichtet. Bis dahin siehst du hier deine eigenen Punkte."))}</p>${howPoints()}`;
+  if (!lbReady()) { b.innerHTML = `${meBox(0, profile.points)}<p class="hint">${esc(t("Die gemeinsame Rangliste wird gerade eingerichtet. Bis dahin siehst du hier deine eigenen Punkte."))}</p>${howPoints()}`; return; }
+  if (profile.lbOptIn == null || profile.lbOptIn === false) {
+    const first = profile.lbOptIn == null;
+    b.innerHTML = `${prize}<section class="card join-card"><h3 class="card-t">${esc(contestOpen(c) ? t("Beim Gewinnspiel mitmachen?") : t("Bei der Rangliste mitmachen?"))}</h3>
+      <p>${esc(t("Dann sehen alle Aqua-Map-Nutzer deinen Spitznamen, dein Bild und deine Punkte. Mehr nicht. Du kannst das in den Einstellungen jederzeit wieder ausschalten."))}</p>
+      ${contestOpen(c) ? contactFieldHTML() : ""}
+      <div class="row2">${first ? `<button type="button" class="act" id="lbno">${esc(t("Nein danke"))}</button>` : ""}<button type="button" class="act primary${first ? "" : " wide"}" id="lbyes">${esc(t("Mitmachen"))}</button></div></section>${howPoints()}`;
+    $("#lbyes").onclick = async () => {
+      const ct = $("#lbcontact") ? $("#lbcontact").value.trim() : "";
+      profile.lbOptIn = true; saveProfile(); await lbSync();
+      if (ct) await saveContact(ct);
+      renderRanking();
+    };
+    const no = $("#lbno"); if (no) no.onclick = () => { profile.lbOptIn = false; saveProfile(); renderRanking(); };
     return;
   }
-  if (profile.lbOptIn == null) {
-    b.innerHTML = `${me()}<section class="card"><h3 class="card-t">${esc(t("Bei der Rangliste mitmachen?"))}</h3><p>${esc(t("Dann sehen alle Aqua-Map-Nutzer deinen Spitznamen, dein Bild und deine Punkte. Mehr nicht. Du kannst das in den Einstellungen jederzeit wieder ausschalten."))}</p>
-      <div class="row2"><button type="button" class="act" id="lbno">${esc(t("Nein danke"))}</button><button type="button" class="act primary" id="lbyes">${esc(t("Mitmachen"))}</button></div></section>${howPoints()}`;
-    $("#lbyes").onclick = async () => { profile.lbOptIn = true; saveProfile(); await lbSync(); renderRanking(); };
-    $("#lbno").onclick = () => { profile.lbOptIn = false; saveProfile(); renderRanking(); };
-    return;
-  }
-  if (profile.lbOptIn === false) {
-    b.innerHTML = `${me()}<p class="lead">${esc(t("Du machst bei der Rangliste nicht mit."))}</p><button type="button" class="act wide" id="lbjoin">${esc(t("Doch mitmachen"))}</button>${howPoints()}`;
-    $("#lbjoin").onclick = async () => { profile.lbOptIn = true; saveProfile(); await lbSync(); renderRanking(); };
-    return;
-  }
-  b.innerHTML = `${me()}<p class="fine">${esc(t("Rangliste wird geladen …"))}</p>`;
+  b.innerHTML = `${prize}${meBox(0, profile.points)}<p class="fine">${esc(t("Rangliste wird geladen …"))}</p>`;
   try {
     await lbSync();
-    const res = await lbCall("leaderboard_public?select=id,name,avatar,points&order=points.desc,updated_at.asc&limit=50");
-    const rows = await res.json();
+    const key = c ? "round_points" : "points", tie = c ? "round_updated_at" : "updated_at";
+    const [rowsRes, meRes] = await Promise.all([
+      lbCall(`leaderboard_public?select=id,name,avatar,photo,${key}&order=${key}.desc,${tie}.asc&limit=50`),
+      lbCall(`leaderboard_public?select=${key}&id=eq.${encodeURIComponent(lbIdent.id)}`)
+    ]);
+    const rows = await rowsRes.json(), mine = ((await meRes.json())[0] || {})[key] || 0;
     let myRank = rows.findIndex((x) => x.id === lbIdent.id) + 1;
     if (!myRank) {
-      const c = await lbCall(`leaderboard_public?select=id&points=gt.${profile.points}&limit=1`, { headers: { Prefer: "count=exact" } });
-      const m = /\/(\d+)/.exec(c.headers.get("content-range") || ""); myRank = m ? +m[1] + 1 : 0;
+      const cr = await lbCall(`leaderboard_public?select=id&${key}=gt.${mine}&limit=1`, { headers: { Prefer: "count=exact" } });
+      const m = /\/(\d+)/.exec(cr.headers.get("content-range") || ""); myRank = m ? +m[1] + 1 : 0;
     }
-    b.innerHTML = `${me(myRank ? t("Platz {n}", { n: myRank }) : "")}
-      <ol class="lb-list">${rows.map((x, i) => `<li class="${x.id === lbIdent.id ? "me" : ""}"><span class="lb-rank">${i + 1}</span><span class="lb-av">${esc(x.avatar || "💧")}</span><span class="lb-name">${esc(x.name)}</span><span class="lb-pts">${num(x.points)}</span></li>`).join("") || `<li class="empty">${esc(t("Noch niemand dabei. Sei die oder der Erste!"))}</li>`}</ol>
+    if (view !== "ranking") return;
+    if (profile.contactHint && !contactValid(c)) { profile.contactHint = ""; profile.contactRound = null; saveProfile(); }
+    const lead = rows[0] ? rows[0][key] || 0 : 0;
+    let extra = "";
+    if (c && contestOpen(c)) extra = mine <= 0 ? t("Sammle Punkte, um ins Gewinnspiel zu kommen.") : myRank === 1 ? t("Du liegst vorne! Halte durch bis zum Ende.") : t("Noch {n} Punkte bis Platz 1", { n: num(lead - mine + 1) });
+    const rest = rows.filter((x, i) => i >= 3 || (x[key] || 0) <= 0);
+    b.innerHTML = `${prize}${meBox(myRank, c ? mine : profile.points, extra)}
+      ${c && contestOpen(c) ? `<div class="lb-contact"><span>${esc(contactValid(c) ? t("Kontakt für den Gewinnfall: {c}", { c: profile.contactHint }) : t("Noch kein Kontakt für den Gewinnfall hinterlegt."))}</span><button type="button" class="linkbtn" data-contact>${esc(contactValid(c) ? t("Ändern") : t("Hinzufügen"))}</button></div>` : ""}
+      ${podiumHTML(rows, key)}
+      ${rest.length ? `<ol class="lb-list" start="${rows.length - rest.length + 1}">${rest.map((x) => `<li class="${x.id === lbIdent.id ? "me" : ""}"><span class="lb-rank">${rows.indexOf(x) + 1}</span><span class="lb-av">${avatarHTML(x.photo, x.avatar)}</span><span class="lb-name">${esc(x.name)}</span><span class="lb-pts">${num(x[key] || 0)}</span></li>`).join("")}</ol>` : ""}
+      ${rows.length ? "" : `<p class="lead">${esc(t("Noch niemand dabei. Sei die oder der Erste!"))}</p>`}
+      ${c ? `<p class="fine">${esc(t("In der Rangliste stehen die Punkte aus dem Gewinnspiel. Deine Gesamtpunkte siehst du im Profil."))}</p>` : ""}
       <button type="button" class="act wide" id="lbreload">${esc(t("Aktualisieren"))}</button>${howPoints()}`;
-    $("#lbreload").onclick = renderRanking;
+    $("#lbreload").onclick = () => { contestAt = 0; renderRanking(); };
   } catch (e) {
-    b.innerHTML = `${me()}<p class="hint warn">${esc(t("Die Rangliste konnte nicht geladen werden. Prüfe deine Internetverbindung."))}</p><button type="button" class="act wide" id="lbreload">${esc(t("Erneut versuchen"))}</button>`;
+    b.innerHTML = `${prize}${meBox(0, profile.points)}<p class="hint warn">${esc(t("Die Rangliste konnte nicht geladen werden. Prüfe deine Internetverbindung."))}</p><button type="button" class="act wide" id="lbreload">${esc(t("Erneut versuchen"))}</button>`;
     $("#lbreload").onclick = renderRanking;
   }
 }
@@ -1106,7 +1312,7 @@ function renderSettings() {
     try { localStorage.setItem(THEME_KEY, JSON.stringify(rb.value)); } catch (e) { /* egal */ }
     applyThemeAttr(); themeMap(true);
   });
-  $("#slb").onchange = async (e) => { profile.lbOptIn = e.target.checked; saveProfile(); if (!profile.lbOptIn) await lbRemove(); else lbSync(); };
+  $("#slb").onchange = async (e) => { profile.lbOptIn = e.target.checked; saveProfile(); if (!profile.lbOptIn) { await lbRemove(); saveProfile(); } else lbSync(); };
   $("#sreset").onclick = () => {
     $("#sreset").outerHTML = `<div class="confirm" id="sreset"><p>${esc(t("Wirklich alles löschen? Profil, Punkte, Schritte, gemerkte Stellen und Einstellungen auf diesem Gerät gehen verloren."))}</p>
       <div class="row2"><button class="act" type="button" id="rno">${esc(t("Abbrechen"))}</button><button class="act danger" type="button" id="ryes">${esc(t("Ja, alles löschen"))}</button></div></div>`;
@@ -1151,6 +1357,6 @@ renderNavAvatar();
 drawReports();
 coreInit();
 scheduleReminder();
-if (profile.lbOptIn) lbQueueSync();
+if (profile.lbOptIn) { lbQueueSync(); setTimeout(checkWin, 2500); }
 window.addEventListener("online", () => { if (profile.lbOptIn) lbQueueSync(); });
 if (/^#(spiel|raetsel)$/.test(location.hash)) go("games");
